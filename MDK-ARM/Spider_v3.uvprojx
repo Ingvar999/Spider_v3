@@ -336,7 +336,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F767xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;../Drivers/STM32F7xx_HAL_Driver/Inc;../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F7xx/Include;../Drivers/CMSIS/Include;../Inc/spider;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;../Inc/spider/drv</IncludePath>
+              <IncludePath>../Inc; ../Drivers/STM32F7xx_HAL_Driver/Inc; ../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy; ../Drivers/CMSIS/Device/ST/STM32F7xx/Include; ../Drivers/CMSIS/Include; ../Inc/spider; ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1; ../Middlewares/Third_Party/FreeRTOS/Source/include; ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS; ../Inc/spider/drv</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -525,6 +525,21 @@
               <FileType>1</FileType>
               <FilePath>..\Src\spider\debug_utils.c</FilePath>
             </File>
+            <File>
+              <FileName>protocol_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\protocol_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>position_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\position_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>command_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\command_manager.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -584,6 +599,16 @@
               <FileName>drv_servo.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\spider\drv\drv_servo.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_esp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\drv\drv_esp.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\drv\drv_uart.c</FilePath>
             </File>
           </Files>
         </Group>

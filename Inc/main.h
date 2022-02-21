@@ -61,6 +61,8 @@
 #define LED_GREEN_GPIO_Port GPIOB
 #define LED_RED_Pin GPIO_PIN_14
 #define LED_RED_GPIO_Port GPIOB
+#define SERVO_DISABLE_Pin GPIO_PIN_15
+#define SERVO_DISABLE_GPIO_Port GPIOB
 #define LED_BLUE_Pin GPIO_PIN_7
 #define LED_BLUE_GPIO_Port GPIOB
 

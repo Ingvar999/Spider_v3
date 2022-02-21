@@ -9,6 +9,7 @@
 #include "drv_servo.h"
 #include "stm32f7xx_hal.h"
 #include "cmsis_os.h"
+#include "main.h"
 
 extern I2C_HandleTypeDef hi2c1;
 
@@ -20,6 +21,35 @@ extern I2C_HandleTypeDef hi2c1;
 #define BASE_PULSE_MAX				(460)
 #define PULSE_RANGE						(1620)
 #define PULSE_PER_DEGREE			(9)
+
+static const uint16_t base_pulse[SERVO_ID_MAX] = {
+	// Central servos
+	BASE_PULSE_MAX,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MID,
+	BASE_PULSE_MID,
+	// Moving servos
+	BASE_PULSE_MIN,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MAX,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MID,
+	BASE_PULSE_MIN,
+	// Reserved
+	BASE_PULSE_MID,
+	BASE_PULSE_MID,
+	BASE_PULSE_MID,
+	BASE_PULSE_MID,
+	// Rotation servos
+	BASE_PULSE_MAX,
+	BASE_PULSE_MID,
+	BASE_PULSE_MAX,
+	BASE_PULSE_MIN,
+	BASE_PULSE_MAX,
+	BASE_PULSE_MIN
+};
 
 static void pca9685_init(I2C_HandleTypeDef *hi2c, uint8_t address)
 {
@@ -48,24 +78,35 @@ static void pca9685_pwm(I2C_HandleTypeDef *hi2c, uint8_t address, uint8_t num, u
   HAL_I2C_Master_Transmit(&hi2c1, address, outputBuffer, 5, 1);
 }
 
-static uint16_t angle_to_pulse(uint16_t degrees)
+static uint16_t angle_to_pulse(servo_id_t port, uint16_t degrees)
 {
-	return BASE_PULSE_MID + (degrees * PULSE_PER_DEGREE);
+	return base_pulse[port] + (degrees * PULSE_PER_DEGREE);
 }
 
 void drv_servo_init(void)
 {
+	drv_servo_disable();
 	pca9685_init(I2C_HANDLER, PCA_BOARD_BASE_ADDR);
 }
 
-void drv_servo_set(uint8_t port, uint16_t value)
+void drv_servo_enable(void)
 {
-	if (value <= 180)
+	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_RESET);
+}
+
+void drv_servo_disable(void)
+{
+	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
+}
+
+void drv_servo_set(servo_id_t port, uint16_t value)
+{
+	if ((value <= 180) && (port < SERVO_ID_MAX))
 	{
 		uint8_t pca_addr = PCA_BOARD_BASE_ADDR + (port / PORTS_PER_BOARD);
-		port = port % PORTS_PER_BOARD;
-		value = angle_to_pulse(value);
+		value = angle_to_pulse(port, value);
+		uint8_t pca_port = port % PORTS_PER_BOARD;
 		
-		pca9685_pwm(I2C_HANDLER, pca_addr, port, 0, value);
+		pca9685_pwm(I2C_HANDLER, pca_addr, pca_port, 0, value);
 	}
 }
