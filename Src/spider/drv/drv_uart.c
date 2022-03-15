@@ -7,7 +7,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "drv_uart.h"
-#include "stm32f7xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 extern UART_HandleTypeDef UART_PORT_HOST;
 extern UART_HandleTypeDef UART_PORT_ESP;

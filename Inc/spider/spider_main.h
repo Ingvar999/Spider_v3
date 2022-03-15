@@ -5,24 +5,7 @@
   ******************************************************************************
   **/
 
-/* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __SPIDER_MAIN_H
-#define __SPIDER_MAIN_H
-
-/* Includes ------------------------------------------------------------------*/
-
-
-/* Private define ------------------------------------------------------------*/
-
-
-#ifdef __cplusplus
- extern "C" {
-#endif
+#pragma once
 
 void post_init_handler(void);
 
-#ifdef __cplusplus
-}
-#endif 
-
-#endif /* __SPIDER_MAIN_H */

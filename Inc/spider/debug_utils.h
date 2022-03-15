@@ -6,7 +6,7 @@
   **/
 
 #pragma once
-#include "stm32f7xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include <stdlib.h>
 #include "main.h"
 #include "drv_uart.h"

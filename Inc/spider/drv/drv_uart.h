@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include "defines.h"
 
-#define UART_PORT_HOST				huart3
-#define UART_PORT_ESP					huart5
+#define UART_PORT_HOST				huart1
+#define UART_PORT_ESP					huart2
 
 #define RX_BUF_SIZE						(70)
 
