@@ -13,6 +13,7 @@
 #include "debug_utils.h"
 #include "cmsis_os.h"
 #include "drv_servo.h"
+#include "drv_uart.h"
 #include "defines.h"
 #include "protocol_handler.h"
 #include "command_manager.h"
@@ -43,11 +44,11 @@ void cli_event_handler(const char *data, uint32_t len)
 		memcpy(cli_string, data, len);
 		cli_in_process = TRUE;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			PRINTF("Resume thread failed\n");
+			ASSERT(ASSERT_CODE_01);
 		}
 	}
 	else {
-		PRINTF("Cli input lost!\n");
+		LOG_ERR("Cli input lost!\n");
 	}
 }
 
@@ -57,11 +58,11 @@ void esp_event_handler(const char *data, uint32_t len)
 		memcpy(esp_string, data, len);
 		esp_in_process = TRUE;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			PRINTF("Resume thread failed\n");
+			ASSERT(ASSERT_CODE_02);
 		}
 	}
 	else {
-		PRINTF("Esp input lost!\n");
+		LOG_ERR("Esp input lost!\n");
 	}
 }
 
@@ -74,10 +75,14 @@ void post_init_handler(void)
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
+	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
+	
 	drv_servo_init();
 	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
 	drv_uart_start_input_handling(UART_ID_ESP, '\n', esp_event_handler);
-	PRINTF("Init Done!\n");
+	LOG_INFO("Init Done!\n");
+	
+	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
 }
 
 static void StartInputHandlerTask(void const * argument)
@@ -102,7 +107,7 @@ static void StartInputHandlerTask(void const * argument)
 		
 		if (!cli_in_process && !esp_in_process)
 			if (osThreadSuspend(osThreadGetId()) != osOK){
-				PRINTF("Suspend thread failed\n");
+				ASSERT(ASSERT_CODE_03);
 			}
 	}
 }
@@ -111,18 +116,22 @@ static void StartHeartBeatTask(void const * argument)
 {
 	static uint32_t last_wake_time;
 	static int led_counter = 0;
+	
 	while (1)
 	{
 		last_wake_time = osKernelSysTick();
 		
-		if (led_counter-- == 0) {
-			LED_CHANGE(BLUE);
+		if (led_counter-- == 0) 
+		{
+			LED_CHANGE(GREEN);
 			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		
-		if (pos_mgr_update_legs_position(HEART_BEAT_DELAY)){
-			if (osThreadResume(InputHandlerTaskHandle) != osOK){
-				PRINTF("Resume thread failed\n");
+		if (0)//(pos_mgr_update_legs_position(HEART_BEAT_DELAY))
+		{
+			if (osThreadResume(InputHandlerTaskHandle) != osOK)
+			{
+				ASSERT(ASSERT_CODE_04);
 			}
 		}
 		
@@ -134,9 +143,10 @@ static void StartCommandManagerTask(void const * argument)
 {
 	while (1)
 	{
-		cmd_mgr_process();
-		if (osThreadSuspend(osThreadGetId()) != osOK){
-			PRINTF("Suspend thread failed\n");
+		//cmd_mgr_process();
+		if (osThreadSuspend(osThreadGetId()) != osOK)
+		{
+			ASSERT(ASSERT_CODE_05);
 		}
 	}
 }

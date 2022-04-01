@@ -16,18 +16,20 @@ typedef struct {
 	UART_HandleTypeDef *handle;
 	input_handler_t input_handler;
 	volatile bool_t is_tx_busy;
-	uint32_t rx_pos;
+	volatile uint32_t rx_pos;
+	uart_transfer_mode_t transfer_mode;
 	char terminator;
 } uart_port_config_t;
 
 static uart_port_config_t uart_config[UART_ID_LAST] = {
-	{&UART_PORT_HOST, NULL, FALSE, 0, 0},
-	{&UART_PORT_ESP, NULL, FALSE, 0, 0},
+	{&UART_PORT_HOST, NULL, FALSE, 0, TRANSFER_ASYNC_MODE, 0},
+	{&UART_PORT_ESP, NULL, FALSE, 0, TRANSFER_ASYNC_MODE, 0},
 };
 static uint8_t ch;
 static uint8_t rx_buf[UART_ID_LAST][RX_BUF_SIZE];
 
-static uart_port_id_t get_uart_port_id(UART_HandleTypeDef *huart){
+static uart_port_id_t get_uart_port_id(UART_HandleTypeDef *huart)
+{
 	uart_port_id_t uart_port = UART_ID_HOST;
 	
 	for (; uart_port < UART_ID_LAST; uart_port++){
@@ -38,7 +40,8 @@ static uart_port_id_t get_uart_port_id(UART_HandleTypeDef *huart){
 	return uart_port;
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
 	uart_port_id_t uart_port = get_uart_port_id(huart);
 	
 	if (uart_port < UART_ID_LAST){
@@ -59,7 +62,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
 	uart_port_id_t uart_port = get_uart_port_id(huart);
 	
 	if (uart_port < UART_ID_LAST){
@@ -67,17 +71,32 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 	}
 }
 
-void drv_uart_start_input_handling(uart_port_id_t uart_id, uint8_t terminator, input_handler_t handler){
+void drv_uart_start_input_handling(uart_port_id_t uart_id, uint8_t terminator, input_handler_t handler)
+{
 	uart_config[uart_id].terminator = terminator;
 	uart_config[uart_id].input_handler = handler;
 	HAL_UART_Receive_IT(uart_config[uart_id].handle, &ch, 1);
 }
 
-bool_t drv_uart_is_tx_busy(uart_port_id_t uart_id){
+volatile bool_t drv_uart_is_tx_busy(uart_port_id_t uart_id){
 	return uart_config[uart_id].is_tx_busy;
 }
-void drv_uart_transfer(uart_port_id_t uart_id, uint8_t *buf, uint32_t len){
+void drv_uart_transfer(uart_port_id_t uart_id, uint8_t *buf, uint32_t len)
+{
 	while (uart_config[uart_id].is_tx_busy) __asm("nop");
-	uart_config[uart_id].is_tx_busy = TRUE;
-	HAL_UART_Transmit_IT(uart_config[uart_id].handle, buf, len);
+	
+	if (uart_config[uart_id].transfer_mode == TRANSFER_ASYNC_MODE)
+	{
+		uart_config[uart_id].is_tx_busy = TRUE;
+		HAL_UART_Transmit_IT(uart_config[uart_id].handle, buf, len);
+	}
+	else
+	{
+		HAL_UART_Transmit(uart_config[uart_id].handle, buf, len, 0xFFFF);
+	}
+}
+
+void drv_uart_set_transfer_mode(uart_port_id_t uart_id, uart_transfer_mode_t mode)
+{
+	uart_config[uart_id].transfer_mode = mode;
 }

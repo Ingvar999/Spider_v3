@@ -1,5 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
-FREERTOS.IPParameters=Tasks01
+FREERTOS.FootprintOK=true
+FREERTOS.INCLUDE_vTaskDelayUntil=1
+FREERTOS.IPParameters=Tasks01,INCLUDE_vTaskDelayUntil,FootprintOK
 FREERTOS.Tasks01=defaultTask,0,128,StartDefaultTask,Default,NULL
 File.Version=6
 KeepUserPlacement=false
@@ -62,7 +64,7 @@ PA2.Signal=USART2_TX
 PA3.Mode=Asynchronous
 PA3.Signal=USART2_RX
 PA6.GPIOParameters=PinState,GPIO_Label
-PA6.GPIO_Label=LED_BLUE
+PA6.GPIO_Label=LED_GREEN
 PA6.Locked=true
 PA6.PinState=GPIO_PIN_SET
 PA6.Signal=GPIO_Output

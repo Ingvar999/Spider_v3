@@ -1,10 +1,15 @@
 /**
   ******************************************************************************
-  * File Name          : debug_utils.c
+  * File Name          : assert.c
   * Description        : 
   ******************************************************************************
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "debug_utils.h"
+#include "assert.h"
+#include "log.h"
 
+void assert_impl(assert_code_t code)
+{
+	PRINTF("ASSERT: %02X !!!\n", code);
+}
