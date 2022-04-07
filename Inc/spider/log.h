@@ -20,8 +20,10 @@
 
 #if DIRECT_LOG_ENABLE || BUFFER_LOG_ENABLE
 #define _LOG_LEVEL_								LOG_LEVEL_DBG
+#define TIMING_MEASURING_ENABLE		(1)
 #else
 #define _LOG_LEVEL_								LOG_LEVEL_NONE	// Constant
+#define TIMING_MEASURING_ENABLE		(0)
 #endif
 
 #define LOG_MSG_BUF_SIZE					(50)
@@ -40,8 +42,10 @@
 
 #if (_LOG_LEVEL_ >= LOG_LEVEL_WARN)
 #define LOG_WARN(...)							log_printf(LOG_LEVEL_WARN, __VA_ARGS__)
+#define TODO(msg)									log_printf(LOG_LEVEL_NONE, "TODO: %s\n", msg)
 #else
 #define LOG_WARN(...)
+#define TODO(msg)
 #endif
 
 #if (_LOG_LEVEL_ >= LOG_LEVEL_INFO)
@@ -56,7 +60,15 @@
 #define LOG_DBG(...)
 #endif
  
+#if TIMING_MEASURING_ENABLE
+#define TIMING_MES_VAR						uint32_t _timing_measurig_start = 0
+#define START_MESURE()						_timing_measurig_start = HAL_GetTick()
+#define END_MESURE(tag)						PRINTF("MEASURE " tag ": %ums\n", HAL_GetTick() - _timing_measurig_start);
+#else
+#define TIMING_MES_VAR
+#define START_MESURE()
+#define END_MESURE(tag)
+#endif
+
 void log_printf(int level, const char *format, ...);
- 
- 
- 
+

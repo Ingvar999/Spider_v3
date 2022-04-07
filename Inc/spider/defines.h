@@ -18,15 +18,15 @@
 #define L1 																(60)
 #define L2 																(60)
 
+#define CMD_PARAM_OMITTED									(0xFFFF)
 
- typedef enum {
-	 FALSE = 0,
-	 TRUE,
- } bool_t;
+typedef enum {
+	FALSE = 0,
+	TRUE,
+} bool_t;
  
- #define SQR(x)														((x) * (x))
- #define SIGN(x)													(((x) > 0) ? 1 : (((x) == 0) ? 0 : -1))
+#define SQR(x)														((x) * (x))
+#define SIGN(x)													(((x) > 0) ? 1 : (((x) == 0) ? 0 : -1))
 
- #define str_starts_with(str, substr)			(memcmp(str, substr, sizeof(substr)) == 0)
- 
- 
+#define str_starts_with(str, substr)			(memcmp(str, substr, sizeof(substr)) == 0)
+

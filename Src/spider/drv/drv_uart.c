@@ -56,6 +56,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			}
 			else{
 				// buffer overflow
+				rx_buf[uart_port][uart_config[uart_port].rx_pos - 1] = '%';
 			}
 		}	
 		HAL_UART_Receive_IT(huart, &ch, 1);
@@ -78,21 +79,21 @@ void drv_uart_start_input_handling(uart_port_id_t uart_id, uint8_t terminator, i
 	HAL_UART_Receive_IT(uart_config[uart_id].handle, &ch, 1);
 }
 
-volatile bool_t drv_uart_is_tx_busy(uart_port_id_t uart_id){
+bool_t drv_uart_is_tx_busy(uart_port_id_t uart_id){
 	return uart_config[uart_id].is_tx_busy;
 }
-void drv_uart_transfer(uart_port_id_t uart_id, uint8_t *buf, uint32_t len)
+void drv_uart_transfer(uart_port_id_t uart_id, const uint8_t *buf, uint32_t len)
 {
 	while (uart_config[uart_id].is_tx_busy) __asm("nop");
 	
 	if (uart_config[uart_id].transfer_mode == TRANSFER_ASYNC_MODE)
 	{
 		uart_config[uart_id].is_tx_busy = TRUE;
-		HAL_UART_Transmit_IT(uart_config[uart_id].handle, buf, len);
+		HAL_UART_Transmit_IT(uart_config[uart_id].handle, (uint8_t*)buf, len);
 	}
 	else
 	{
-		HAL_UART_Transmit(uart_config[uart_id].handle, buf, len, 0xFFFF);
+		HAL_UART_Transmit(uart_config[uart_id].handle, (uint8_t*)buf, len, 0xFFFF);
 	}
 }
 

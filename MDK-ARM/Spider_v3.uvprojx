@@ -645,6 +645,16 @@
               <FileType>5</FileType>
               <FilePath>..\Inc\spider\log.h</FilePath>
             </File>
+            <File>
+              <FileName>buffer_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\buffer_queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>buffer_queue.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Inc\spider\buffer_queue.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -7,8 +7,6 @@
 
 #pragma once
 
-#define CMD_MGR_PARAM_INVALID							(0xFFFF)
-
 typedef enum {
 	CMD_MGR_SUCCESS,
 	CMD_MGR_QUEUE_IS_FULL,
@@ -27,7 +25,7 @@ typedef struct {
 	task_type_t task_type;
 	int arg_1;
 	int arg_2;
-	int arg_3;
+	char task_id;
 } pending_task_ctx_t;
 
 cmd_mgr_status_t cmd_mgr_init(void);

@@ -22,7 +22,7 @@ typedef enum {
 	POS_MGR_GENERIC_ERROR,
 } pos_mgr_status_t;
 
-pos_mgr_status_t pos_mgr_init(void);
+pos_mgr_status_t pos_mgr_set_init_state(void);
 
 pos_mgr_status_t pos_mgr_change_global_height(int h_delta);
 

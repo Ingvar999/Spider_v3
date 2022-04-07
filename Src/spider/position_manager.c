@@ -36,7 +36,7 @@ static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, 
 
 static void pos_mgr_update_leg_target_angles(uint8_t leg_id);
 
-pos_mgr_status_t pos_mgr_init(void)
+pos_mgr_status_t pos_mgr_set_init_state(void)
 {
 	global_h = BASIC_HEIGHT;
 	global_r = BASIC_RADIUS;
@@ -108,8 +108,8 @@ static void pos_mgr_update_leg_target_angles(uint8_t leg_id)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
   int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
-  p_leg->target_pos[MOVING_SERVO_ID] = (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad);
-  p_leg->target_pos[CENTRAL_SERVO_ID] = 180 - (uint8_t)round((acos((double)(p_leg->current_h) / sqrt(r2)) + acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1))) * ToGrad);
+  p_leg->target_pos[MOVING_SERVO_ID] = 180 - (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad);
+  p_leg->target_pos[CENTRAL_SERVO_ID] = (uint8_t)round((acos((double)(p_leg->current_h) / sqrt(r2)) + acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1))) * ToGrad);
 }
 
 bool_t pos_mgr_update_legs_position(uint32_t time_passed)

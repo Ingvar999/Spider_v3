@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 #include "spider_main.h"
 #include "debug_utils.h"
 #include "cmsis_os.h"
@@ -18,20 +19,22 @@
 #include "protocol_handler.h"
 #include "command_manager.h"
 #include "position_manager.h"
+#include "buffer_queue.h"
 
 #define HEART_BEAT_DELAY					(100)
 #define LED_SWITCH_TIMEOUT				(3000)
 
 #define HOST_RX_BUF_SIZE					(30)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
-#define OUTPUT_BUFFER_SIZE				(100)
+#define ESP_INPUT_QUEUE_SIZE			(2)
 
 /* Private variables ---------------------------------------------------------*/
 static osThreadId HeartBeatTaskHandle, InputHandlerTaskHandle, CommandManagerTaskHandle;
 static char cli_string[HOST_RX_BUF_SIZE];
-static char esp_string[ESP_RX_BUF_SIZE];
-static volatile bool_t cli_in_process = FALSE, esp_in_process = FALSE;
-static char output_string[OUTPUT_BUFFER_SIZE];
+static char esp_input_buf[ESP_INPUT_QUEUE_SIZE][ESP_RX_BUF_SIZE];
+static buffer_queue_t esp_input_queue;
+static volatile bool_t cli_in_process = FALSE;
+static bool_t is_esp_config_mode = FALSE;
 
 /* Private function prototypes -----------------------------------------------*/
 static void StartInputHandlerTask(void const * argument);
@@ -48,26 +51,32 @@ void cli_event_handler(const char *data, uint32_t len)
 		}
 	}
 	else {
-		LOG_ERR("Cli input lost!\n");
+		// HOST packet lost
+		LED_CHANGE(RED);
 	}
 }
 
 void esp_event_handler(const char *data, uint32_t len)
 {
-	if (!esp_in_process && ESP_RX_BUF_SIZE >= len){
-		memcpy(esp_string, data, len);
-		esp_in_process = TRUE;
+	void *buffer;
+	
+	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, TRUE)) != NULL)){
+		memcpy(buffer, data, len);
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
 			ASSERT(ASSERT_CODE_02);
 		}
 	}
 	else {
-		LOG_ERR("Esp input lost!\n");
+		// ESP packet lost
+		LED_CHANGE(RED);
 	}
 }
 
 void post_init_handler(void)
 {
+	TIMING_MES_VAR;
+	START_MESURE();
+	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
 	osThreadDef(HeartBeatTask, StartHeartBeatTask, osPriorityBelowNormal, 0, configMINIMAL_STACK_SIZE);
@@ -78,10 +87,15 @@ void post_init_handler(void)
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
 	
 	drv_servo_init();
+	pos_mgr_set_init_state();
+	cmd_mgr_init();
+	
+	bufq_init(&esp_input_queue, esp_input_buf, ESP_RX_BUF_SIZE, ESP_INPUT_QUEUE_SIZE);
 	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
 	drv_uart_start_input_handling(UART_ID_ESP, '\n', esp_event_handler);
-	LOG_INFO("Init Done!\n");
 	
+	LOG_INFO("Init Done!\n");
+	END_MESURE("Init");
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
 }
 
@@ -91,21 +105,47 @@ static void StartInputHandlerTask(void const * argument)
 	{
 		if (cli_in_process)
 		{
-			/*int val = atoi(cli_string);
-			if (val >= 0 && val <= 180)
+			if (cli_string[0] == 'e')
 			{
-				drv_servo_set(0, val);
-			}*/
-			drv_uart_transfer(UART_ID_HOST, (uint8_t *)output_string, protocol_handle(cli_string, output_string, OUTPUT_BUFFER_SIZE));
+				/*
+				int val = atoi(cli_string + 1);
+				if (val >= 0 && val <= 180)
+				{
+					drv_servo_set(0, val);
+				}*/
+				if (str_starts_with(cli_string + 1, "esp"))
+				{
+					is_esp_config_mode = !is_esp_config_mode;
+					LOG_INFO("ESP config mode: %d\n", is_esp_config_mode);
+				}
+			}
+			else if (is_esp_config_mode)
+			{
+				uint32_t len = strlen(cli_string);
+				cli_string[len++] = '\r';
+				cli_string[len++] = '\n';
+				drv_uart_transfer(UART_ID_ESP, (uint8_t*)cli_string, len);
+			}
+			else
+			{
+				protocol_handle(cli_string);
+			}
 			cli_in_process = FALSE;
 		}
 		
-		if (esp_in_process)
+		char *esp_string;
+		if ((esp_string = bufq_get_read_buffer(&esp_input_queue, FALSE)) != NULL)
 		{
-			esp_in_process = FALSE;
+			if (is_esp_config_mode)
+			{
+				uint32_t len = strlen(esp_string);
+				esp_string[len++] = '\n';
+				drv_uart_transfer(UART_ID_HOST, (uint8_t*)esp_string, len);
+			}
+			bufq_free_buffer(&esp_input_queue, FALSE);
 		}
 		
-		if (!cli_in_process && !esp_in_process)
+		if (!cli_in_process && (bufq_get_read_buffer(&esp_input_queue, FALSE) == NULL))
 			if (osThreadSuspend(osThreadGetId()) != osOK){
 				ASSERT(ASSERT_CODE_03);
 			}
@@ -127,12 +167,16 @@ static void StartHeartBeatTask(void const * argument)
 			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		
-		if (0)//(pos_mgr_update_legs_position(HEART_BEAT_DELAY))
+		if (pos_mgr_update_legs_position(HEART_BEAT_DELAY))
 		{
-			if (osThreadResume(InputHandlerTaskHandle) != osOK)
+			if (osThreadResume(CommandManagerTaskHandle) != osOK)
 			{
 				ASSERT(ASSERT_CODE_04);
 			}
+		}
+		else
+		{
+			LOG_DBG("Legs busy\n");
 		}
 		
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);
@@ -143,7 +187,7 @@ static void StartCommandManagerTask(void const * argument)
 {
 	while (1)
 	{
-		//cmd_mgr_process();
+		cmd_mgr_process();
 		if (osThreadSuspend(osThreadGetId()) != osOK)
 		{
 			ASSERT(ASSERT_CODE_05);

@@ -12,6 +12,7 @@
 #include "defines.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "protocol_handler.h"
 
 #pragma anon_unions
 
@@ -33,13 +34,14 @@ typedef struct {
 	task_type_t task_type;
 } active_task_ctx_t;
 
-typedef cmd_mgr_status_t (*task_handler_t)(int arg1, int arg2, int arg3);
+typedef cmd_mgr_status_t (*task_handler_t)(int arg1, int arg2);
 
 static xQueueHandle task_queue;
 static active_task_ctx_t _tasks_ctx[MAX_TASK_NESTING];
 static active_task_ctx_t *task_ctx;
+static char active_task_id;
 
-static cmd_mgr_status_t change_height_handler(int height, int arg_2, int arg_3);
+static cmd_mgr_status_t change_height_handler(int height, int arg_2);
 
 static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	change_height_handler
@@ -47,14 +49,13 @@ static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 
 cmd_mgr_status_t cmd_mgr_init(void)
 {
-	cmd_mgr_status_t status = CMD_MGR_GENERIC_ERROR;
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
 	
 	task_ctx = _tasks_ctx;
 	task_ctx->task_stage = TASK_STAGE_IDLE;
 	task_queue = xQueueCreate(CMD_QUEUE_SIZE, sizeof(pending_task_ctx_t));
-	if (task_queue != NULL){
-		status = CMD_MGR_SUCCESS;
-	}
+	ASSERT_IF(ASSERT_CODE_08, task_queue == NULL);
+	
 	return status;
 }
 
@@ -72,9 +73,34 @@ cmd_mgr_status_t cmd_mgr_add_task(pending_task_ctx_t *task_ctx)
 	return status;
 }
 
+static void send_cmd_complition(cmd_mgr_status_t status)
+{
+	external_status_t ext_status;
+	switch (status)
+	{
+		case CMD_MGR_SUCCESS:
+			ext_status = EXT_STATUS_OK;
+		break;
+		case CMD_MGR_INVALID_PARAMS:
+			ext_status = EXT_INVALID_PARAMETERS;
+		break;
+		case CMD_MGR_INVALID_POSITION:
+			ext_status = EXT_INVALID_POSITION;
+		break;
+		default:
+			LOG_ERR("Task completion status %d\n", status);
+			ext_status = EXT_GENERIC_ERROR;
+	}
+	protocol_send_response(active_task_id, ext_status, 0);
+}
+
 cmd_mgr_status_t cmd_mgr_process(void)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	bool_t task_executed = FALSE;
+	
+	ASSERT_IF(ASSERT_CODE_06, task_ctx < _tasks_ctx);
+	ASSERT_IF(ASSERT_CODE_07, task_ctx > (_tasks_ctx + MAX_TASK_NESTING - 1));
 	
 	if (task_ctx->task_stage == TASK_STAGE_IDLE)
 	{
@@ -83,23 +109,28 @@ cmd_mgr_status_t cmd_mgr_process(void)
 		{
 			task_ctx->task_stage = TASK_STAGE_1;
 			task_ctx->task_type = task.task_type;
-			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2, task.arg_3);
-			if (status != CMD_MGR_SUCCESS){
-				task_ctx->task_stage = TASK_STAGE_IDLE;
-			}
+			active_task_id = task.task_id;
+			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
+			task_executed = TRUE;
 		}
 	}
 	else
 	{
-		status = task_handlers[task_ctx->task_type](0, 0, 0);
+		status = task_handlers[task_ctx->task_type](0, 0);
+		task_executed = TRUE;
+	}
+	
+	if (task_executed)
+	{
 		if (status != CMD_MGR_SUCCESS){
 		  task_ctx->task_stage = TASK_STAGE_IDLE;
 		}
+		send_cmd_complition(status);
 	}
 	return status;
 }
 
-static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2, int arg_3)
+static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
 
