@@ -52,3 +52,5 @@ Mkfile.old
 dkms.conf
 MDK-ARM/lst/
 MDK-ARM/out/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
