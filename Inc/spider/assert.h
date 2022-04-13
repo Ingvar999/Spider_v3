@@ -24,6 +24,8 @@ typedef enum
 	ASSERT_CODE_0B,
 	ASSERT_CODE_0C,
 	ASSERT_CODE_0D,
+	ASSERT_CODE_0E,
+	ASSERT_CODE_0F,
 } assert_code_t;
 
 #define ASSERT(code)							assert_impl(code)

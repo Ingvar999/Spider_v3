@@ -38,7 +38,7 @@ void* bufq_get_write_buffer(buffer_queue_t *handle, bool_t is_isr)
 		{
 			if ((xQueueSendFromISR(handle->read_buffers_queue, (void *)&buffer, &xHigherPriorityTaskWoken) != pdPASS) || (xHigherPriorityTaskWoken != pdFALSE))
 			{
-				LED_CHANGE(RED);
+				LED_ON(RED);
 			}
 		}
 	}
@@ -81,7 +81,7 @@ void bufq_free_buffer(buffer_queue_t *handle, bool_t is_isr)
 		{
 			if ((xQueueSendFromISR(handle->write_buffers_queue, (void *)&buffer, &xHigherPriorityTaskWoken) != pdPASS) || (xHigherPriorityTaskWoken != pdFALSE))
 			{
-				LED_CHANGE(RED);
+				LED_ON(RED);
 			}
 		}
 	}

@@ -8,7 +8,6 @@
 #pragma once
 #include <stdint.h>
 
-void drv_servo_init(void);
-void drv_servo_set(uint8_t port, uint16_t value);
-void drv_servo_enable(void);
-void drv_servo_disable(void);
+void drv_esp_init(void);
+void drv_esp_handle_input(const char *input);
+void drv_esp_send(const char *data, int data_len);

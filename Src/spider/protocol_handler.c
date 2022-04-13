@@ -13,8 +13,9 @@
 #include "defines.h"
 #include "command_manager.h"
 #include "drv_uart.h"
+#include "drv_esp.h"
 
-#define OUTPUT_BUFFER_SIZE				(100)
+#define OUTPUT_BUFFER_SIZE				(128)
 #define RESP_HEADER_SIZE					(4)
 
 static char output_string[OUTPUT_BUFFER_SIZE];
@@ -31,6 +32,8 @@ void protocol_handle(const char *input)
   char request_type = REQUEST_TYPE_NONE;
   char request_id = '0';
 	uint32_t msg_len = strlen(input);
+	
+	ASSERT_IF(ASSERT_CODE_0F, input == NULL);
 
   if ((msg_len >= 3) && (msg_len <= 15)) {
     request_id = input[0];
@@ -115,17 +118,24 @@ void protocol_handle(const char *input)
 
 void protocol_send_response(char response_id, external_status_t status, int additional_info_len)
 {
-	output_string[0] = response_id;
-	output_string[1] = '0' + (status >> 8);
-	output_string[2] = '0' + (status & 0xFF);
-	output_string[3] = '\n';
-	
-	if ((response_id >= '5') && (response_id <= '9'))
+	if (RESP_HEADER_SIZE + additional_info_len > OUTPUT_BUFFER_SIZE)
 	{
-		drv_uart_transfer(UART_ID_HOST, (uint8_t*)output_string, RESP_HEADER_SIZE + additional_info_len);
+		LOG_ERR("Protocol resp buffer overflow");
 	}
 	else
 	{
+		output_string[0] = response_id;
+		output_string[1] = '0' + (status >> 8);
+		output_string[2] = '0' + (status & 0xFF);
+		output_string[3] = '\n';
 		
+		if ((response_id >= '5') && (response_id <= '9'))
+		{
+			drv_uart_transfer(UART_ID_HOST, (uint8_t*)output_string, RESP_HEADER_SIZE + additional_info_len);
+		}
+		else
+		{
+			drv_esp_send(output_string, RESP_HEADER_SIZE + additional_info_len);
+		}
 	}
 }

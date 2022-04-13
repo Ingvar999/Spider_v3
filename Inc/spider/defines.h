@@ -26,7 +26,7 @@ typedef enum {
 } bool_t;
  
 #define SQR(x)														((x) * (x))
-#define SIGN(x)													(((x) > 0) ? 1 : (((x) == 0) ? 0 : -1))
+#define SIGN(x)													  (((x) > 0) ? 1 : (((x) == 0) ? 0 : -1))
 
-#define str_starts_with(str, substr)			(memcmp(str, substr, sizeof(substr)) == 0)
+#define str_starts_with(str, substr)			(memcmp(str, substr, sizeof(substr) - 1) == 0)
 

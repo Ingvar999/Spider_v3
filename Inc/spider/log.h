@@ -26,7 +26,7 @@
 #define TIMING_MEASURING_ENABLE		(0)
 #endif
 
-#define LOG_MSG_BUF_SIZE					(50)
+#define LOG_MSG_BUF_SIZE					(160)
  
 #if (_LOG_LEVEL_ > LOG_LEVEL_NONE)
 #define PRINTF(...)								log_printf(LOG_LEVEL_NONE, __VA_ARGS__)

@@ -12,7 +12,7 @@
 #define UART_PORT_HOST				huart1
 #define UART_PORT_ESP					huart2
 
-#define RX_BUF_SIZE						(70)
+#define RX_BUF_SIZE						(64)
 
 typedef enum {
 	UART_ID_HOST,

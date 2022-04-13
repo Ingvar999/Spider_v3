@@ -20,13 +20,14 @@
 #include "command_manager.h"
 #include "position_manager.h"
 #include "buffer_queue.h"
+#include "drv_esp.h"
 
 #define HEART_BEAT_DELAY					(100)
 #define LED_SWITCH_TIMEOUT				(3000)
 
-#define HOST_RX_BUF_SIZE					(30)
+#define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
-#define ESP_INPUT_QUEUE_SIZE			(2)
+#define ESP_INPUT_QUEUE_SIZE			(3)
 
 /* Private variables ---------------------------------------------------------*/
 static osThreadId HeartBeatTaskHandle, InputHandlerTaskHandle, CommandManagerTaskHandle;
@@ -47,12 +48,12 @@ void cli_event_handler(const char *data, uint32_t len)
 		memcpy(cli_string, data, len);
 		cli_in_process = TRUE;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			ASSERT(ASSERT_CODE_01);
+			LED_ON(RED);
 		}
 	}
 	else {
 		// HOST packet lost
-		LED_CHANGE(RED);
+		LED_ON(RED);
 	}
 }
 
@@ -63,12 +64,12 @@ void esp_event_handler(const char *data, uint32_t len)
 	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, TRUE)) != NULL)){
 		memcpy(buffer, data, len);
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			ASSERT(ASSERT_CODE_02);
+			LED_ON(RED);
 		}
 	}
 	else {
 		// ESP packet lost
-		LED_CHANGE(RED);
+		LED_ON(RED);
 	}
 }
 
@@ -76,6 +77,16 @@ void post_init_handler(void)
 {
 	TIMING_MES_VAR;
 	START_MESURE();
+	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
+	
+	bufq_init(&esp_input_queue, esp_input_buf, ESP_RX_BUF_SIZE, ESP_INPUT_QUEUE_SIZE);
+	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
+	drv_uart_start_input_handling(UART_ID_ESP, '\n', esp_event_handler);
+	drv_esp_init();
+	
+	drv_servo_init();
+	cmd_mgr_init();
+	pos_mgr_set_init_state();
 	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
@@ -83,16 +94,6 @@ void post_init_handler(void)
   HeartBeatTaskHandle = osThreadCreate(osThread(HeartBeatTask), NULL);
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
-	
-	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
-	
-	drv_servo_init();
-	pos_mgr_set_init_state();
-	cmd_mgr_init();
-	
-	bufq_init(&esp_input_queue, esp_input_buf, ESP_RX_BUF_SIZE, ESP_INPUT_QUEUE_SIZE);
-	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
-	drv_uart_start_input_handling(UART_ID_ESP, '\n', esp_event_handler);
 	
 	LOG_INFO("Init Done!\n");
 	END_MESURE("Init");
@@ -139,8 +140,12 @@ static void StartInputHandlerTask(void const * argument)
 			if (is_esp_config_mode)
 			{
 				uint32_t len = strlen(esp_string);
-				esp_string[len++] = '\n';
+				esp_string[len - 1] = '\n'; // replace /r with /n
 				drv_uart_transfer(UART_ID_HOST, (uint8_t*)esp_string, len);
+			}
+			else
+			{
+				drv_esp_handle_input(esp_string);
 			}
 			bufq_free_buffer(&esp_input_queue, FALSE);
 		}
