@@ -690,6 +690,16 @@
               <FileType>5</FileType>
               <FilePath>..\Inc\spider\drv\drv_uart.h</FilePath>
             </File>
+            <File>
+              <FileName>drv_gyro.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Inc\spider\drv\drv_gyro.h</FilePath>
+            </File>
+            <File>
+              <FileName>drv_gyro.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\drv\drv_gyro.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

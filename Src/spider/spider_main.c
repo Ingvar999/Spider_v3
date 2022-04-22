@@ -21,9 +21,11 @@
 #include "position_manager.h"
 #include "buffer_queue.h"
 #include "drv_esp.h"
+#include "drv_gyro.h"
 
-#define HEART_BEAT_DELAY					(100)
+#define HEART_BEAT_DELAY					(50)
 #define LED_SWITCH_TIMEOUT				(3000)
+#define GYRO_UPDATE_TIMEOUT				(100)
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
@@ -86,6 +88,7 @@ void post_init_handler(void)
 	
 	drv_servo_init();
 	cmd_mgr_init();
+	drv_gyro_init();
 	pos_mgr_set_init_state();
 	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
@@ -160,7 +163,8 @@ static void StartInputHandlerTask(void const * argument)
 static void StartHeartBeatTask(void const * argument)
 {
 	static uint32_t last_wake_time;
-	static int led_counter = 0;
+	static int led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
+	static int gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
 	
 	while (1)
 	{
@@ -170,6 +174,12 @@ static void StartHeartBeatTask(void const * argument)
 		{
 			LED_CHANGE(GREEN);
 			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
+		}
+		
+		if (gyro_counter-- == 0) 
+		{
+			drv_gyro_update(GYRO_UPDATE_TIMEOUT);
+			gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		
 		if (pos_mgr_update_legs_position(HEART_BEAT_DELAY))
