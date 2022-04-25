@@ -17,11 +17,12 @@ extern I2C_HandleTypeDef hi2c1;
 #define I2C_HANDLER								(&hi2c1)
 #define I2C_TIMEOUT								(30)
 #define INIT_SAMPLE_DELAY					(50)
+#define MPU6050_SMPLRT_DIV				(0x19)
 #define MPU6050_ACCEL_XOUT_H      (0x3B)
 #define MPU6050_PWR_MGMT_1        (0x6B)
 #define MPU6050_PWR_MGMT_2        (0x6C)
 #define MPU6050_WHO_AM_I          (0x75)
-#define MPU6050_I2C_ADDRESS       (0x68)
+#define MPU6050_I2C_ADDRESS       (0xD0) //(0x68)
 
 #define FS_SEL 										(131.0)
 #define FS_SEL_ACCEL							(1) //(16384.0)
@@ -88,31 +89,42 @@ drv_gyro_status_t drv_gyro_init(void)
 {
 	drv_gyro_status_t status;
   uint8_t c;
-
-  status = MPU6050_read(MPU6050_WHO_AM_I, &c, 1);
-	if ((status == GYRO_STATUS_SUCCESS) && (c == 0x68)) 
+	int tries = 0;
+	
+	status = MPU6050_read(MPU6050_WHO_AM_I, &c, 1);
+	while ((status != GYRO_STATUS_SUCCESS) || (c != 0x72))
+	{
+		if (++tries == 16)
+		{
+			status = GYRO_NOT_AVAILABLE;
+			LOG_ERR("GYRO not available\n");
+			break;
+		}
+		HAL_Delay(10);
+		status = MPU6050_read(MPU6050_WHO_AM_I, &c, 1);
+	}
+	
+	if (status == GYRO_STATUS_SUCCESS)
 	{
 		status = MPU6050_write_reg(MPU6050_PWR_MGMT_1, 0);
 		if (status == GYRO_STATUS_SUCCESS)
 		{
-			calibrate_sensors();
-			set_last_read_angle_data(0, 0, 0, 0, 0);
-			is_initialized = TRUE;
+			status = MPU6050_write_reg(MPU6050_SMPLRT_DIV, 0x7);
+			if (status == GYRO_STATUS_SUCCESS)
+			{
+				calibrate_sensors();
+				set_last_read_angle_data(0, 0, 0, 0, 0);
+				is_initialized = TRUE;
+			}
 		}
 	}
-	else
-	{
-		status = GYRO_NOT_AVAILABLE;
-	}
-	
+
 	return status;
 }
 
 drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 {
 	drv_gyro_status_t status;
-	TIMING_MES_VAR;
-	START_MESURE();
 	
 	if (is_initialized)
 	{
@@ -125,9 +137,9 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 			double gyro_y = (accel_t_gyro.value.y_gyro - base_y_gyro) / FS_SEL;
 			double gyro_z = (accel_t_gyro.value.z_gyro - base_z_gyro) / FS_SEL;
 
-			double accel_x = accel_t_gyro.value.x_accel / FS_SEL_ACCEL;
-			double accel_y = accel_t_gyro.value.y_accel / FS_SEL_ACCEL;
-			double accel_z = accel_t_gyro.value.z_accel / FS_SEL_ACCEL;
+			double accel_x = accel_t_gyro.value.x_accel;// / FS_SEL_ACCEL;
+			double accel_y = accel_t_gyro.value.y_accel;// / FS_SEL_ACCEL;
+			double accel_z = accel_t_gyro.value.z_accel;// / FS_SEL_ACCEL;
 
 			double accel_angle_y = atan(-1 * accel_x / sqrt(pow(accel_y, 2) + pow(accel_z, 2))) * ToGrad;
 			double accel_angle_x = atan(accel_y / sqrt(pow(accel_x, 2) + pow(accel_z, 2))) * ToGrad;
@@ -154,14 +166,14 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 			else
 				angle_horizontal -= 90.0;
 			angle_vertical = ToGrad * atan(sqrt(x * x + y * y));
-			LOG_DBG("GYRO: %f - %f\n", angle_vertical, angle_horizontal);
+			//LOG_DBG("GYRO: %f - %f\n", angle_vertical, angle_horizontal);
 		}
 	}
 	else
 	{
 		status = GYRO_NOT_INITIALIZED;
 	}
-	END_MESURE("Gyro");
+	// END_MESURE("Gyro"); // 5ms
 	return status;
 }
 

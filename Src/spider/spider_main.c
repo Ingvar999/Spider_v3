@@ -25,7 +25,7 @@
 
 #define HEART_BEAT_DELAY					(50)
 #define LED_SWITCH_TIMEOUT				(3000)
-#define GYRO_UPDATE_TIMEOUT				(100)
+#define GYRO_UPDATE_TIMEOUT				(200)
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
@@ -88,7 +88,6 @@ void post_init_handler(void)
 	
 	drv_servo_init();
 	cmd_mgr_init();
-	drv_gyro_init();
 	pos_mgr_set_init_state();
 	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
@@ -97,6 +96,8 @@ void post_init_handler(void)
   HeartBeatTaskHandle = osThreadCreate(osThread(HeartBeatTask), NULL);
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
+	
+	drv_gyro_init();
 	
 	LOG_INFO("Init Done!\n");
 	END_MESURE("Init");
