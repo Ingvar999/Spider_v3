@@ -85,16 +85,15 @@ static drv_gyro_status_t MPU6050_read(int addr, uint8_t *buffer, int size);
 static drv_gyro_status_t MPU6050_write(int addr, uint8_t *pData, int size);
 static drv_gyro_status_t MPU6050_write_reg(int addr, uint8_t data);
 
-drv_gyro_status_t drv_gyro_init(void)
+drv_gyro_status_t drv_gyro_init(int tries)
 {
 	drv_gyro_status_t status;
   uint8_t c;
-	int tries = 0;
 	
 	status = MPU6050_read(MPU6050_WHO_AM_I, &c, 1);
 	while ((status != GYRO_STATUS_SUCCESS) || (c != 0x72))
 	{
-		if (++tries == 16)
+		if (--tries == 0)
 		{
 			status = GYRO_NOT_AVAILABLE;
 			LOG_ERR("GYRO not available\n");
@@ -167,6 +166,10 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 				angle_horizontal -= 90.0;
 			angle_vertical = ToGrad * atan(sqrt(x * x + y * y));
 			//LOG_DBG("GYRO: %f - %f\n", angle_vertical, angle_horizontal);
+		}
+		else
+		{
+			LOG_ERR("Read Gyro values failed\n");
 		}
 	}
 	else

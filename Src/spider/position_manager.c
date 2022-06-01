@@ -23,20 +23,18 @@ typedef struct {
 
 	int current_h;
 	int current_r;
-	uint8_t servo_pos[LEG_SERVO_ID_LAST];
-	uint8_t target_pos[LEG_SERVO_ID_LAST];
-	double speed_accum[LEG_SERVO_ID_LAST];
+	int rotation_angle;
 } leg_ctx_t;
 
 static uint8_t fixed_leg_id = LEGS_COUNT;
 static leg_ctx_t legs_ctx[LEGS_COUNT];
 static int global_h, global_r;
-static const int legs_layout[LEGS_COUNT] = {0, 60, 120, 180, 240, 300};
+static const int legs_layout[LEGS_COUNT] = {0, 60, 120, 180, -120, -60};
 static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, SERVO_ID_MOVING_0, SERVO_ID_ROTATION_0};
 
-static void pos_mgr_update_leg_target_angles(uint8_t leg_id);
+static void pos_mgr_apply_leg_position(uint8_t leg_id, bool_t force);
 
-pos_mgr_status_t pos_mgr_set_init_state(void)
+pos_mgr_status_t pos_mgr_set_init_state(bool_t force)
 {
 	global_h = BASIC_HEIGHT;
 	global_r = BASIC_RADIUS;
@@ -45,16 +43,9 @@ pos_mgr_status_t pos_mgr_set_init_state(void)
 	{
 		legs_ctx[leg_id].current_h = global_h;
 		legs_ctx[leg_id].current_r = global_r;
-		pos_mgr_update_leg_target_angles(leg_id);
+		legs_ctx[leg_id].rotation_angle = 90;
 		
-		legs_ctx[leg_id].servo_pos[CENTRAL_SERVO_ID] = legs_ctx[leg_id].target_pos[CENTRAL_SERVO_ID];
-		legs_ctx[leg_id].servo_pos[MOVING_SERVO_ID] = legs_ctx[leg_id].target_pos[MOVING_SERVO_ID];
-		legs_ctx[leg_id].servo_pos[ROTATION_SERVO_ID] = legs_ctx[leg_id].target_pos[ROTATION_SERVO_ID] = 90;
-		
-		for (leg_servo_id_t servo_id = CENTRAL_SERVO_ID; servo_id < LEG_SERVO_ID_LAST; ++servo_id)
-		{
-			drv_servo_set(leg_servo_map[servo_id] + leg_id, legs_ctx[leg_id].servo_pos[servo_id]);
-		}
+		pos_mgr_apply_leg_position(leg_id, force);
 	}
 	return POS_MGR_SUCCESS;
 }
@@ -77,7 +68,7 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius)
 {
   legs_ctx[leg_id].current_h = height;
   legs_ctx[leg_id].current_r = radius;
-  pos_mgr_update_leg_target_angles(leg_id);
+  pos_mgr_apply_leg_position(leg_id, FALSE);
 }
 
 pos_mgr_status_t pos_mgr_change_global_height(int h_delta)
@@ -104,55 +95,13 @@ pos_mgr_status_t pos_mgr_change_global_height(int h_delta)
 	return status;
 }
 
-static void pos_mgr_update_leg_target_angles(uint8_t leg_id)
+static void pos_mgr_apply_leg_position(uint8_t leg_id, bool_t force)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
   int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
-  p_leg->target_pos[MOVING_SERVO_ID] = 180 - (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad);
-  p_leg->target_pos[CENTRAL_SERVO_ID] = (uint8_t)round((acos((double)(p_leg->current_h) / sqrt(r2)) + acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1))) * ToGrad);
-}
-
-bool_t pos_mgr_update_legs_position(uint32_t time_passed)
-{
-  int diff, abs_diff, sign, d;
-	bool_t target_reached = TRUE;
-  double de, delta = ((double)(3 * time_passed) / 150);
-	leg_ctx_t *p_leg;
-	
-	for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
-	{
-		p_leg = &legs_ctx[leg_id];
-		for (leg_servo_id_t servo_id = CENTRAL_SERVO_ID; servo_id < LEG_SERVO_ID_LAST; ++servo_id)
-		{
-			diff = p_leg->target_pos[servo_id] - p_leg->servo_pos[servo_id];
-			if (diff) {
-				sign = SIGN(diff);
-				abs_diff = sign * diff;
-				de = sqrt(abs_diff) * delta;
-				if (de > 1){
-					d = (int)de;
-					if (d >= abs_diff){
-						p_leg->servo_pos[servo_id] = p_leg->target_pos[servo_id];
-					}
-					else{
-						p_leg->servo_pos[servo_id] += sign * d;
-					}
-					drv_servo_set(leg_servo_map[servo_id] + leg_id, p_leg->servo_pos[servo_id]);
-				}
-				else{
-					p_leg->speed_accum[servo_id] += de;
-					if (p_leg->speed_accum[servo_id] > 1){
-						p_leg->servo_pos[servo_id] += sign;
-						drv_servo_set(leg_servo_map[servo_id] + leg_id, p_leg->servo_pos[servo_id]);
-						p_leg->speed_accum[servo_id] = 0;
-					}
-				}
-				if (p_leg->target_pos[servo_id] != p_leg->servo_pos[servo_id]){
-					target_reached = FALSE;
-				}
-			}
-		}
-	}
-
-  return target_reached;
+	drv_servo_set((servo_id_t)(leg_servo_map[MOVING_SERVO_ID] + leg_id), 
+								180 - (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad), force);
+	drv_servo_set((servo_id_t)(leg_servo_map[CENTRAL_SERVO_ID] + leg_id), 
+								(uint8_t)round((acos((double)(p_leg->current_h) / sqrt(r2)) + acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1))) * ToGrad), force);
+	drv_servo_set((servo_id_t)(leg_servo_map[ROTATION_SERVO_ID] + leg_id), p_leg->rotation_angle, force);
 }

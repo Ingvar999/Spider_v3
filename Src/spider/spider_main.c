@@ -88,7 +88,7 @@ void post_init_handler(void)
 	
 	drv_servo_init();
 	cmd_mgr_init();
-	pos_mgr_set_init_state();
+	pos_mgr_set_init_state(TRUE);
 	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
@@ -97,8 +97,8 @@ void post_init_handler(void)
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
-	drv_gyro_init();
-	
+	drv_gyro_init(16);
+	drv_servo_enable();
 	LOG_INFO("Init Done!\n");
 	END_MESURE("Init");
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
@@ -110,14 +110,16 @@ static void StartInputHandlerTask(void const * argument)
 	{
 		if (cli_in_process)
 		{
-			if (cli_string[0] == 'e')
+			if (cli_string[0] == 's')
 			{
-				/*
 				int val = atoi(cli_string + 1);
 				if (val >= 0 && val <= 180)
 				{
-					drv_servo_set(0, val);
-				}*/
+					drv_servo_set(21, val, FALSE);
+				}
+			}
+			if (cli_string[0] == 'e')
+			{
 				if (str_starts_with(cli_string + 1, "esp"))
 				{
 					is_esp_config_mode = !is_esp_config_mode;
@@ -179,11 +181,14 @@ static void StartHeartBeatTask(void const * argument)
 		
 		if (gyro_counter-- == 0) 
 		{
-			drv_gyro_update(GYRO_UPDATE_TIMEOUT);
+			if (drv_gyro_update(GYRO_UPDATE_TIMEOUT) == GYRO_NOT_INITIALIZED)
+			{
+				drv_gyro_init(1);
+			}
 			gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		
-		if (pos_mgr_update_legs_position(HEART_BEAT_DELAY))
+		if (drv_servo_update_servos_position(HEART_BEAT_DELAY))
 		{
 			if (osThreadResume(CommandManagerTaskHandle) != osOK)
 			{
