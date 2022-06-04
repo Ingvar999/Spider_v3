@@ -10,11 +10,12 @@
 #include "defines.h"
 
 #define LEGS_COUNT					(6)
+#define MIN_RADIUS					(15)
 #define DEFAULT_HEIGHT			(40)
 #define DEFAULT_RADIUS			(50)
 #define BASIC_HEIGHT				(0)
-#define BASIC_RADIUS				(15)
-#define MIN_RADIUS					(20)
+#define BASIC_RADIUS				MIN_RADIUS
+
 
 typedef enum {
 	POS_MGR_SUCCESS,

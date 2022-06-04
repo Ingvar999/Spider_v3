@@ -39,14 +39,14 @@ void log_printf(int level, const char *format, ...)
 	
 	memcpy(_log_msg_buf, _log_level_prefix[level], LOG_PREFIX_LEN);
 	va_start(args_list, format);
-	msg_len += vsprintf((char *)_log_msg_buf + LOG_PREFIX_LEN, format, args_list);
+	msg_len += vsnprintf((char *)_log_msg_buf + LOG_PREFIX_LEN, LOG_MSG_BUF_SIZE - LOG_PREFIX_LEN, format, args_list);
 	va_end(args_list);
 
 #if (DIRECT_LOG_ENABLE)
 	drv_uart_transfer(UART_ID_HOST, _log_msg_buf, msg_len);
 #endif
 	
-	if (msg_len > LOG_MSG_BUF_SIZE)
+	if (msg_len >= LOG_MSG_BUF_SIZE)
 	{
 		LOG_ERR("Log Buffer overflow!!!\n");
 	}

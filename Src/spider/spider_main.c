@@ -22,10 +22,11 @@
 #include "buffer_queue.h"
 #include "drv_esp.h"
 #include "drv_gyro.h"
+#include "drv_sensors.h"
 
-#define HEART_BEAT_DELAY					(50)
+#define HEART_BEAT_DELAY					(25)
 #define LED_SWITCH_TIMEOUT				(3000)
-#define GYRO_UPDATE_TIMEOUT				(200)
+#define GYRO_UPDATE_TIMEOUT				(150)
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
@@ -88,7 +89,6 @@ void post_init_handler(void)
 	
 	drv_servo_init();
 	cmd_mgr_init();
-	pos_mgr_set_init_state(TRUE);
 	
 	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
@@ -98,7 +98,10 @@ void post_init_handler(void)
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
 	drv_gyro_init(16);
+	drv_sensors_init();
 	drv_servo_enable();
+	pos_mgr_set_init_state(TRUE);
+	
 	LOG_INFO("Init Done!\n");
 	END_MESURE("Init");
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
@@ -110,7 +113,11 @@ static void StartInputHandlerTask(void const * argument)
 	{
 		if (cli_in_process)
 		{
-			if (cli_string[0] == 's')
+			if (cli_string[0] == 'a')
+			{
+				drv_sensors_print_adc();
+			}
+			else if (cli_string[0] == 's')
 			{
 				int val = atoi(cli_string + 1);
 				if (val >= 0 && val <= 180)
@@ -118,7 +125,7 @@ static void StartInputHandlerTask(void const * argument)
 					drv_servo_set(21, val, FALSE);
 				}
 			}
-			if (cli_string[0] == 'e')
+			else if (cli_string[0] == 'e')
 			{
 				if (str_starts_with(cli_string + 1, "esp"))
 				{
@@ -197,7 +204,7 @@ static void StartHeartBeatTask(void const * argument)
 		}
 		else
 		{
-			LOG_DBG("Legs busy\n");
+			//LOG_DBG("Legs busy\n");
 		}
 		
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);

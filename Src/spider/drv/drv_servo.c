@@ -23,7 +23,7 @@ extern I2C_HandleTypeDef hi2c1;
 #define BASE_PULSE_MAX				(460)
 #define PULSE_RANGE						(1620)
 #define PULSE_PER_DEGREE			(9)
-#define I2C_TIMEOT						(2)
+#define PCA_I2C_TIMEOT				(2)
 
 static const uint16_t base_pulse[SERVO_ID_MAX] = {
 	// Central servos
@@ -89,7 +89,7 @@ typedef enum
 static bool_t pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
 {
 	uint8_t data[] = {address, value};
-	return HAL_I2C_Master_Transmit(I2C_HANDLER, dev_addr, data, 2, I2C_TIMEOT) == HAL_OK;
+	return HAL_I2C_Master_Transmit(I2C_HANDLER, dev_addr, data, 2, PCA_I2C_TIMEOT) == HAL_OK;
 }
 
 static void pca9685_init(uint8_t address)
@@ -103,20 +103,20 @@ static void pca9685_init(uint8_t address)
 	uint8_t newmode = ((oldmode & 0x7F) | 0x10);
 	initStruct[0] = PCA9685_REGISTER_MODE1;
 	initStruct[1] = newmode;
-	res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, I2C_TIMEOT);
+	res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
 	if (res == HAL_OK)
 	{
 		initStruct[1] = prescale;
-		res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, I2C_TIMEOT);
+		res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
 		if (res == HAL_OK)
 		{
 			initStruct[1] = oldmode;
-			res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, I2C_TIMEOT);
+			res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
 			if (res == HAL_OK)
 			{
 				osDelay(5);
 				initStruct[1] = (oldmode | 0xA1);
-				res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, I2C_TIMEOT);
+				res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
 			}
 		}
 	}
@@ -129,7 +129,7 @@ static void pca9685_init(uint8_t address)
 static void pca9685_pwm(uint8_t address, uint8_t num, uint16_t on, uint16_t off)
 {
   uint8_t outputBuffer[5] = {0x06 + 4*num, on, (on >> 8), off, (off >> 8)};
-	HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, I2C_TIMEOT);
+	HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, PCA_I2C_TIMEOT);
 	if (res != HAL_OK)
 	{
 		LOG_ERR("Write Servo failed: addr - %X, status - %d\n", address, res);
@@ -152,7 +152,6 @@ static uint16_t angle_to_pulse(servo_id_t port, uint16_t degrees)
 void drv_servo_init(void)
 {
 	drv_servo_disable();
-	//osDelay(50);
 	pca9685_init(PCA_BOARD_BASE_ADDR);
 	pca9685_init(PCA_BOARD_BASE_ADDR + 1);
 }
@@ -196,7 +195,7 @@ bool_t drv_servo_update_servos_position(uint32_t time_passed)
 			abs_diff = sign * diff;
 			de = sqrt(abs_diff) * delta;
 			
-			d = (de > 1) ? (int)de : 1;
+			d = (de < 2) ? 1 : (int)de;
 
 			if (d >= abs_diff)
 			{

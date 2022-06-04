@@ -119,7 +119,7 @@ void drv_esp_send(const char *data, int data_len)
 		{
 			LOG_WARN("No active connection to send\n");
 		}
-		if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, FALSE)) == NULL)
+		else if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, FALSE)) == NULL)
 		{
 			LOG_ERR("ESP too busy for send request\n");
 		}
