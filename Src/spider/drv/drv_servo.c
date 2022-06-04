@@ -86,7 +86,7 @@ typedef enum
 	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
 } pca9685_register_mode1_t;
 
-static bool_t pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
+static bool pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
 {
 	uint8_t data[] = {address, value};
 	return HAL_I2C_Master_Transmit(I2C_HANDLER, dev_addr, data, 2, PCA_I2C_TIMEOT) == HAL_OK;
@@ -166,7 +166,7 @@ void drv_servo_disable(void)
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
 }
 
-void drv_servo_set(servo_id_t port, uint16_t value, bool_t force)
+void drv_servo_set(servo_id_t port, uint16_t value, bool force)
 {
 	if ((value <= 180) && (port < SERVO_ID_MAX))
 	{
@@ -180,10 +180,10 @@ void drv_servo_set(servo_id_t port, uint16_t value, bool_t force)
 	}
 }
 
-bool_t drv_servo_update_servos_position(uint32_t time_passed)
+bool drv_servo_update_servos_position(uint32_t time_passed)
 {
   int diff, abs_diff, sign, d;
-	bool_t target_reached = TRUE;
+	bool target_reached = true;
   double de, delta = ((double)(3 * time_passed) / 50);
 	
 	for (servo_id_t port = SERVO_ID_FIRST; port < SERVO_ID_MAX; ++port)
@@ -209,7 +209,7 @@ bool_t drv_servo_update_servos_position(uint32_t time_passed)
 
 			if (target_pwm[port] != current_pwm[port])
 			{
-				target_reached = FALSE;
+				target_reached = false;
 			}
 		}
 	}

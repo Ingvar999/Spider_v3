@@ -24,7 +24,7 @@ void bufq_init(buffer_queue_t *handle, void* storage, int buf_size, int buf_coun
 	}
 }
 
-void* bufq_get_write_buffer(buffer_queue_t *handle, bool_t is_isr)
+void* bufq_get_write_buffer(buffer_queue_t *handle, bool is_isr)
 {
 	void *buffer = NULL;
 	
@@ -52,7 +52,7 @@ void* bufq_get_write_buffer(buffer_queue_t *handle, bool_t is_isr)
 	return buffer;
 }
 
-void* bufq_get_read_buffer(buffer_queue_t *handle, bool_t is_isr)
+void* bufq_get_read_buffer(buffer_queue_t *handle, bool is_isr)
 {
 	void *buffer = NULL;
 	
@@ -67,7 +67,7 @@ void* bufq_get_read_buffer(buffer_queue_t *handle, bool_t is_isr)
 	return buffer;
 }
 
-void bufq_free_buffer(buffer_queue_t *handle, bool_t is_isr)
+void bufq_free_buffer(buffer_queue_t *handle, bool is_isr)
 {
 	void *buffer = NULL;
 	

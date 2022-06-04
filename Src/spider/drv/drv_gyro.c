@@ -76,7 +76,7 @@ static double    base_z_gyro;
 static double    angle_horizontal;
 static double    angle_vertical;
 
-static bool_t is_initialized = FALSE;
+static bool is_initialized = false;
 
 static inline void set_last_read_angle_data(double x, double y, double x_gyro, double y_gyro, double z_gyro);
 static drv_gyro_status_t read_gyro_accel_vals(uint8_t* accel_t_gyro_ptr);
@@ -113,7 +113,7 @@ drv_gyro_status_t drv_gyro_init(int tries)
 			{
 				calibrate_sensors();
 				set_last_read_angle_data(0, 0, 0, 0, 0);
-				is_initialized = TRUE;
+				is_initialized = true;
 			}
 		}
 	}

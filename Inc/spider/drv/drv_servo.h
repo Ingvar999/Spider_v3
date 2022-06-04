@@ -37,7 +37,7 @@ typedef enum {
 } servo_id_t;
 
 void drv_servo_init(void);
-void drv_servo_set(servo_id_t port, uint16_t value, bool_t force);
+void drv_servo_set(servo_id_t port, uint16_t value, bool force);
 void drv_servo_enable(void);
 void drv_servo_disable(void);
-bool_t drv_servo_update_servos_position(uint32_t time_passed);
+bool drv_servo_update_servos_position(uint32_t time_passed);

@@ -15,15 +15,15 @@ extern UART_HandleTypeDef UART_PORT_ESP;
 typedef struct {
 	UART_HandleTypeDef *handle;
 	input_handler_t input_handler;
-	volatile bool_t is_tx_busy;
+	volatile bool is_tx_busy;
 	volatile uint32_t rx_pos;
 	uart_transfer_mode_t transfer_mode;
 	char terminator;
 } uart_port_config_t;
 
 static uart_port_config_t uart_config[UART_ID_LAST] = {
-	{&UART_PORT_HOST, NULL, FALSE, 0, TRANSFER_ASYNC_MODE, 0},
-	{&UART_PORT_ESP, NULL, FALSE, 0, TRANSFER_ASYNC_MODE, 0},
+	{&UART_PORT_HOST, NULL, false, 0, TRANSFER_ASYNC_MODE, 0},
+	{&UART_PORT_ESP, NULL, false, 0, TRANSFER_ASYNC_MODE, 0},
 };
 static uint8_t ch;
 static uint8_t rx_buf[UART_ID_LAST][RX_BUF_SIZE];
@@ -68,7 +68,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	uart_port_id_t uart_port = get_uart_port_id(huart);
 	
 	if (uart_port < UART_ID_LAST){
-		uart_config[uart_port].is_tx_busy = FALSE;
+		uart_config[uart_port].is_tx_busy = false;
 	}
 }
 
@@ -79,7 +79,7 @@ void drv_uart_start_input_handling(uart_port_id_t uart_id, uint8_t terminator, i
 	HAL_UART_Receive_IT(uart_config[uart_id].handle, &ch, 1);
 }
 
-bool_t drv_uart_is_tx_busy(uart_port_id_t uart_id){
+bool drv_uart_is_tx_busy(uart_port_id_t uart_id){
 	return uart_config[uart_id].is_tx_busy;
 }
 void drv_uart_transfer(uart_port_id_t uart_id, const uint8_t *buf, uint32_t len)
@@ -88,7 +88,7 @@ void drv_uart_transfer(uart_port_id_t uart_id, const uint8_t *buf, uint32_t len)
 	
 	if (uart_config[uart_id].transfer_mode == TRANSFER_ASYNC_MODE)
 	{
-		uart_config[uart_id].is_tx_busy = TRUE;
+		uart_config[uart_id].is_tx_busy = true;
 		HAL_UART_Transmit_IT(uart_config[uart_id].handle, (uint8_t*)buf, len);
 	}
 	else

@@ -97,7 +97,7 @@ static void send_cmd_complition(cmd_mgr_status_t status)
 cmd_mgr_status_t cmd_mgr_process(void)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
-	bool_t task_executed = FALSE;
+	bool task_executed = false;
 	
 	ASSERT_IF(ASSERT_CODE_06, task_ctx < _tasks_ctx);
 	ASSERT_IF(ASSERT_CODE_07, task_ctx > (_tasks_ctx + MAX_TASK_NESTING - 1));
@@ -111,13 +111,13 @@ cmd_mgr_status_t cmd_mgr_process(void)
 			task_ctx->task_type = task.task_type;
 			active_task_id = task.task_id;
 			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
-			task_executed = TRUE;
+			task_executed = true;
 		}
 	}
 	else
 	{
 		status = task_handlers[task_ctx->task_type](0, 0);
-		task_executed = TRUE;
+		task_executed = true;
 	}
 	
 	if (task_executed)

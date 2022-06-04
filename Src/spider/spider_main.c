@@ -37,8 +37,8 @@ static osThreadId HeartBeatTaskHandle, InputHandlerTaskHandle, CommandManagerTas
 static char cli_string[HOST_RX_BUF_SIZE];
 static char esp_input_buf[ESP_INPUT_QUEUE_SIZE][ESP_RX_BUF_SIZE];
 static buffer_queue_t esp_input_queue;
-static volatile bool_t cli_in_process = FALSE;
-static bool_t is_esp_config_mode = FALSE;
+static volatile bool cli_in_process = false;
+static bool is_esp_config_mode = false;
 
 /* Private function prototypes -----------------------------------------------*/
 static void StartInputHandlerTask(void const * argument);
@@ -49,7 +49,7 @@ void cli_event_handler(const char *data, uint32_t len)
 {
 	if (!cli_in_process && HOST_RX_BUF_SIZE >= len){
 		memcpy(cli_string, data, len);
-		cli_in_process = TRUE;
+		cli_in_process = true;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
 			LED_ON(RED);
 		}
@@ -64,7 +64,7 @@ void esp_event_handler(const char *data, uint32_t len)
 {
 	void *buffer;
 	
-	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, TRUE)) != NULL)){
+	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, true)) != NULL)){
 		memcpy(buffer, data, len);
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
 			LED_ON(RED);
@@ -82,6 +82,8 @@ void post_init_handler(void)
 	START_MESURE();
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
 	
+	drv_sensors_init();
+	
 	bufq_init(&esp_input_queue, esp_input_buf, ESP_RX_BUF_SIZE, ESP_INPUT_QUEUE_SIZE);
 	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
 	drv_uart_start_input_handling(UART_ID_ESP, '\n', esp_event_handler);
@@ -98,9 +100,17 @@ void post_init_handler(void)
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
 	drv_gyro_init(16);
-	drv_sensors_init();
-	drv_servo_enable();
-	pos_mgr_set_init_state(TRUE);
+	
+	if (!drv_sensors_is_critical_vcc())
+	{
+		drv_servo_enable();
+	}
+	else
+	{
+		LOG_ERR("Citical VCC\n");
+	}
+	
+	pos_mgr_set_init_state(true);
 	
 	LOG_INFO("Init Done!\n");
 	END_MESURE("Init");
@@ -122,7 +132,7 @@ static void StartInputHandlerTask(void const * argument)
 				int val = atoi(cli_string + 1);
 				if (val >= 0 && val <= 180)
 				{
-					drv_servo_set(21, val, FALSE);
+					drv_servo_set(21, val, false);
 				}
 			}
 			else if (cli_string[0] == 'e')
@@ -144,11 +154,11 @@ static void StartInputHandlerTask(void const * argument)
 			{
 				protocol_handle(cli_string);
 			}
-			cli_in_process = FALSE;
+			cli_in_process = false;
 		}
 		
 		char *esp_string;
-		if ((esp_string = bufq_get_read_buffer(&esp_input_queue, FALSE)) != NULL)
+		if ((esp_string = bufq_get_read_buffer(&esp_input_queue, false)) != NULL)
 		{
 			if (is_esp_config_mode)
 			{
@@ -160,10 +170,10 @@ static void StartInputHandlerTask(void const * argument)
 			{
 				drv_esp_handle_input(esp_string);
 			}
-			bufq_free_buffer(&esp_input_queue, FALSE);
+			bufq_free_buffer(&esp_input_queue, false);
 		}
 		
-		if (!cli_in_process && (bufq_get_read_buffer(&esp_input_queue, FALSE) == NULL))
+		if (!cli_in_process && (bufq_get_read_buffer(&esp_input_queue, false) == NULL))
 			if (osThreadSuspend(osThreadGetId()) != osOK){
 				ASSERT(ASSERT_CODE_03);
 			}
@@ -183,6 +193,10 @@ static void StartHeartBeatTask(void const * argument)
 		if (led_counter-- == 0) 
 		{
 			LED_CHANGE(GREEN);
+			if (drv_sensors_is_low_vcc())
+			{
+				LOG_WARN("Low Vcc\n");
+			}
 			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		

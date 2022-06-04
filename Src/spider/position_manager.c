@@ -32,9 +32,9 @@ static int global_h, global_r;
 static const int legs_layout[LEGS_COUNT] = {0, 60, 120, 180, -120, -60};
 static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, SERVO_ID_MOVING_0, SERVO_ID_ROTATION_0};
 
-static void pos_mgr_apply_leg_position(uint8_t leg_id, bool_t force);
+static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force);
 
-pos_mgr_status_t pos_mgr_set_init_state(bool_t force)
+pos_mgr_status_t pos_mgr_set_init_state(bool force)
 {
 	global_h = BASIC_HEIGHT;
 	global_r = BASIC_RADIUS;
@@ -68,7 +68,7 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius)
 {
   legs_ctx[leg_id].current_h = height;
   legs_ctx[leg_id].current_r = radius;
-  pos_mgr_apply_leg_position(leg_id, FALSE);
+  pos_mgr_apply_leg_position(leg_id, false);
 }
 
 pos_mgr_status_t pos_mgr_change_global_height(int h_delta)
@@ -95,7 +95,7 @@ pos_mgr_status_t pos_mgr_change_global_height(int h_delta)
 	return status;
 }
 
-static void pos_mgr_apply_leg_position(uint8_t leg_id, bool_t force)
+static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
   int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);

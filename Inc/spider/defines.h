@@ -9,6 +9,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 #define Pi 3.1416
@@ -19,11 +20,6 @@
 #define L2 																(60)
 
 #define CMD_PARAM_OMITTED									(0xFFFF)
-
-typedef enum {
-	FALSE = 0,
-	TRUE,
-} bool_t;
  
 #define SQR(x)														((x) * (x))
 #define SIGN(x)													  (((x) > 0) ? 1 : (((x) == 0) ? 0 : -1))

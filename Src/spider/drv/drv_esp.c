@@ -119,7 +119,7 @@ void drv_esp_send(const char *data, int data_len)
 		{
 			LOG_WARN("No active connection to send\n");
 		}
-		else if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, FALSE)) == NULL)
+		else if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, false)) == NULL)
 		{
 			LOG_ERR("ESP too busy for send request\n");
 		}
@@ -144,8 +144,8 @@ void drv_esp_handle_input(const char *input)
 {
 	if (input[0] != '\r')
 	{
-		bool_t is_ok = str_starts_with(input, ESP_OK) ? TRUE : FALSE;
-		bool_t is_err = str_starts_with(input, ESP_ERR) ? TRUE : FALSE;
+		bool is_ok = str_starts_with(input, ESP_OK) ? true : false;
+		bool is_err = str_starts_with(input, ESP_ERR) ? true : false;
 		
 		if (is_err)
 		{
@@ -216,7 +216,7 @@ void drv_esp_handle_input(const char *input)
 			case ESP_SEND_1:
 				if (is_ok)
 				{
-					uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, FALSE);
+					uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
 					drv_uart_transfer(UART_ID_ESP, esp_buf + sizeof(int), *((int*) esp_buf));
 					esp_state = ESP_SEND_2;
 				}
@@ -227,7 +227,7 @@ void drv_esp_handle_input(const char *input)
 			case ESP_SEND_2:
 				if (str_starts_with(input, "Recv"))
 				{
-					bufq_free_buffer(&esp_tx_queue, FALSE);
+					bufq_free_buffer(&esp_tx_queue, false);
 				}
 				else if (str_starts_with(input, "SEND OK"))
 				{
@@ -245,7 +245,7 @@ void drv_esp_handle_input(const char *input)
 				ASSERT(ASSERT_CODE_0E);
 		}
 		
-		uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, FALSE);
+		uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
 		if ((esp_buf != NULL) && (esp_state == ESP_READY))
 		{
 			SEND_ESP_TRANSFER_REQ(active_connection, *((int*) esp_buf));
