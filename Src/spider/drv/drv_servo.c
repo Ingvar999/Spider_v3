@@ -85,6 +85,7 @@ typedef enum
 typedef enum
 {
 	PCA9685_REGISTER_MODE1_SLEEP = (1u << 4u),
+	PCA9685_REGISTER_MODE1_AI = (1u << 5u),
 	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
 } pca9685_register_mode1_t;
 
@@ -98,25 +99,10 @@ static drv_servo_status_t pca9685_init(uint8_t address)
 {
 	drv_servo_status_t status;
 
-	uint8_t prescale = 3; // hardcoded
+	uint8_t mode = PCA9685_REGISTER_MODE1_AI | PCA9685_REGISTER_MODE1_RESTART;
 
-	uint8_t oldmode = 0; // hardcoded
-	uint8_t newmode = ((oldmode & 0x7F) | 0x10);
-
-	status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, newmode);
-	if (status == DRV_SERVO_SUCCESS)
-	{
-		status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, prescale);
-		if (status == DRV_SERVO_SUCCESS)
-		{
-			status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, oldmode);
-			if (status == DRV_SERVO_SUCCESS)
-			{
-				osDelay(5);
-				status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, oldmode | 0xA1);
-			}
-		}
-	}
+	status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, mode);
+	
 	if (status != DRV_SERVO_SUCCESS)
 	{
 		LOG_ERR("Iinit Servo failed: addr - %X", address);
