@@ -16,6 +16,7 @@
 #define ToRad 0.01745
 #define ToGrad 57.3
 
+#define LEGS_COUNT												(6)
 #define L1 																(60)
 #define L2 																(60)
 

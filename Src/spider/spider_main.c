@@ -6,10 +6,8 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
+#include "defines.h"
 #include "spider_main.h"
 #include "debug_utils.h"
 #include "cmsis_os.h"
@@ -107,12 +105,12 @@ void post_init_handler(void)
 	}
 	else
 	{
-		LOG_ERR("Citical VCC\n");
+		LOG_ERR("Citical VCC: %d", drv_sensors_get_vcc());
 	}
 	
 	pos_mgr_set_init_state(true);
 	
-	LOG_INFO("Init Done!\n");
+	LOG_INFO("Init Done!");
 	END_MESURE("Init");
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
 }
@@ -140,7 +138,7 @@ static void StartInputHandlerTask(void const * argument)
 				if (str_starts_with(cli_string + 1, "esp"))
 				{
 					is_esp_config_mode = !is_esp_config_mode;
-					LOG_INFO("ESP config mode: %d\n", is_esp_config_mode);
+					LOG_INFO("ESP config mode: %d", is_esp_config_mode);
 				}
 			}
 			else if (is_esp_config_mode)
@@ -195,7 +193,7 @@ static void StartHeartBeatTask(void const * argument)
 			LED_CHANGE(GREEN);
 			if (drv_sensors_is_low_vcc())
 			{
-				LOG_WARN("Low Vcc\n");
+				LOG_WARN("Low Vcc");
 			}
 			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
 		}
@@ -209,7 +207,8 @@ static void StartHeartBeatTask(void const * argument)
 			gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
 		}
 		
-		if (drv_servo_update_servos_position(HEART_BEAT_DELAY))
+		bool is_idle = false;
+		if ((drv_servo_update_servos_position(HEART_BEAT_DELAY, &is_idle) == DRV_SERVO_SUCCESS) && is_idle)
 		{
 			if (osThreadResume(CommandManagerTaskHandle) != osOK)
 			{
@@ -218,7 +217,7 @@ static void StartHeartBeatTask(void const * argument)
 		}
 		else
 		{
-			//LOG_DBG("Legs busy\n");
+			//LOG_DBG("Legs busy");
 		}
 		
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);

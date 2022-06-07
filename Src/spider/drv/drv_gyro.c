@@ -96,7 +96,7 @@ drv_gyro_status_t drv_gyro_init(int tries)
 		if (--tries == 0)
 		{
 			status = GYRO_NOT_AVAILABLE;
-			LOG_ERR("GYRO not available\n");
+			LOG_ERR("GYRO not available");
 			break;
 		}
 		HAL_Delay(10);
@@ -165,11 +165,11 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 			else
 				angle_horizontal -= 90.0;
 			angle_vertical = ToGrad * atan(sqrt(x * x + y * y));
-			//LOG_DBG("GYRO: %f - %f\n", angle_vertical, angle_horizontal);
+			//LOG_DBG("GYRO: %f - %f", angle_vertical, angle_horizontal);
 		}
 		else
 		{
-			LOG_ERR("Read Gyro values failed\n");
+			LOG_ERR("Read Gyro values failed");
 		}
 	}
 	else

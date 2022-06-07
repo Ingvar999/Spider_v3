@@ -9,7 +9,6 @@
 
 #include "defines.h"
 
-#define LEGS_COUNT					(6)
 #define MIN_RADIUS					(15)
 #define DEFAULT_HEIGHT			(40)
 #define DEFAULT_RADIUS			(50)

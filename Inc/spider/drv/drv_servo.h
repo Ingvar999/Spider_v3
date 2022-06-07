@@ -36,8 +36,20 @@ typedef enum {
 	SERVO_ID_MAX
 } servo_id_t;
 
-void drv_servo_init(void);
-void drv_servo_set(servo_id_t port, uint16_t value, bool force);
-void drv_servo_enable(void);
+typedef enum {
+	DRV_SERVO_SUCCESS = 0,
+	DRV_SERVO_HW_ACCESS_ERROR,
+	DRV_SERVO_NOT_INITIALIZED,
+	DRV_SERVO_INVALID_PARAM,
+	DRV_SERVO_GENERIC_ERROR
+} drv_servo_status_t;
+
+drv_servo_status_t drv_servo_init(void);
+drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force);
+drv_servo_status_t drv_servo_enable(void);
 void drv_servo_disable(void);
-bool drv_servo_update_servos_position(uint32_t time_passed);
+
+void drv_servo_set_speed(uint16_t speed);
+uint16_t drv_servo_get_speed(void);
+
+drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *is_idle);

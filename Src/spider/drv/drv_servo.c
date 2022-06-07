@@ -55,6 +55,8 @@ static const uint16_t base_pulse[SERVO_ID_MAX] = {
 	BASE_PULSE_MAX
 };
 
+static bool is_initialized = false;
+static uint16_t speed = 3;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
@@ -86,62 +88,66 @@ typedef enum
 	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
 } pca9685_register_mode1_t;
 
-static bool pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
+static drv_servo_status_t pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
 {
 	uint8_t data[] = {address, value};
-	return HAL_I2C_Master_Transmit(I2C_HANDLER, dev_addr, data, 2, PCA_I2C_TIMEOT) == HAL_OK;
+	return HAL_I2C_Master_Transmit(I2C_HANDLER, dev_addr, data, 2, PCA_I2C_TIMEOT) == HAL_OK ? DRV_SERVO_SUCCESS : DRV_SERVO_HW_ACCESS_ERROR;
 }
 
-static void pca9685_init(uint8_t address)
+static drv_servo_status_t pca9685_init(uint8_t address)
 {
-	HAL_StatusTypeDef res;
-	uint8_t initStruct[2];
+	drv_servo_status_t status;
+
 	uint8_t prescale = 3; // hardcoded
 
 	uint8_t oldmode = 0; // hardcoded
-	//HAL_I2C_Master_Receive(hi2c, address, &oldmode, 1, I2C_TIMEOT);
 	uint8_t newmode = ((oldmode & 0x7F) | 0x10);
-	initStruct[0] = PCA9685_REGISTER_MODE1;
-	initStruct[1] = newmode;
-	res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
-	if (res == HAL_OK)
+
+	status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, newmode);
+	if (status == DRV_SERVO_SUCCESS)
 	{
-		initStruct[1] = prescale;
-		res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
-		if (res == HAL_OK)
+		status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, prescale);
+		if (status == DRV_SERVO_SUCCESS)
 		{
-			initStruct[1] = oldmode;
-			res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
-			if (res == HAL_OK)
+			status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, oldmode);
+			if (status == DRV_SERVO_SUCCESS)
 			{
 				osDelay(5);
-				initStruct[1] = (oldmode | 0xA1);
-				res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, initStruct, 2, PCA_I2C_TIMEOT);
+				status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, oldmode | 0xA1);
 			}
 		}
 	}
-	if (res != HAL_OK)
+	if (status != DRV_SERVO_SUCCESS)
 	{
-		LOG_ERR("Iinit Servo failed: addr - %X, status - %d\n", address, res);
+		LOG_ERR("Iinit Servo failed: addr - %X", address);
 	}
+	return status;
 }
 
-static void pca9685_pwm(uint8_t address, uint8_t num, uint16_t on, uint16_t off)
+static drv_servo_status_t pca9685_pwm(uint8_t address, uint8_t num, uint16_t on, uint16_t off)
 {
   uint8_t outputBuffer[5] = {0x06 + 4*num, on, (on >> 8), off, (off >> 8)};
 	HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, PCA_I2C_TIMEOT);
 	if (res != HAL_OK)
 	{
-		LOG_ERR("Write Servo failed: addr - %X, status - %d\n", address, res);
+		LOG_ERR("Write Servo failed: addr - %X, status - %d", address, res);
 	}
+	return res == HAL_OK ? DRV_SERVO_SUCCESS : DRV_SERVO_HW_ACCESS_ERROR;
 }
 
-static void update_servo_pwm(servo_id_t port)
+static drv_servo_status_t update_servo_pwm(servo_id_t port)
 {
-	uint8_t pca_addr = PCA_BOARD_BASE_ADDR + (port / PORTS_PER_BOARD);
-	uint8_t pca_port = port % PORTS_PER_BOARD;
+	if (is_initialized)
+	{
+		uint8_t pca_addr = PCA_BOARD_BASE_ADDR + (port / PORTS_PER_BOARD);
+		uint8_t pca_port = port % PORTS_PER_BOARD;
 
-	pca9685_pwm(pca_addr, pca_port, 0, current_pwm[port]);
+		return pca9685_pwm(pca_addr, pca_port, 0, current_pwm[port]);
+	}
+	else
+	{
+		return DRV_SERVO_NOT_INITIALIZED;
+	}
 }
 
 static uint16_t angle_to_pulse(servo_id_t port, uint16_t degrees)
@@ -149,16 +155,34 @@ static uint16_t angle_to_pulse(servo_id_t port, uint16_t degrees)
 	return base_pulse[port] + (degrees * PULSE_PER_DEGREE);
 }
 
-void drv_servo_init(void)
+drv_servo_status_t drv_servo_init(void)
 {
+	drv_servo_status_t status;
+	
 	drv_servo_disable();
-	pca9685_init(PCA_BOARD_BASE_ADDR);
-	pca9685_init(PCA_BOARD_BASE_ADDR + 1);
+	status = pca9685_init(PCA_BOARD_BASE_ADDR);
+	if (status == DRV_SERVO_SUCCESS)
+	{
+		status = pca9685_init(PCA_BOARD_BASE_ADDR + 1);
+		if (status == DRV_SERVO_SUCCESS)
+		{
+			is_initialized = true;
+		}
+	}
+	return status;
 }
 
-void drv_servo_enable(void)
+drv_servo_status_t drv_servo_enable(void)
 {
-	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_RESET);
+	if (is_initialized)
+	{
+		HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_RESET);
+		return DRV_SERVO_SUCCESS;
+	}
+	else
+	{
+		return DRV_SERVO_NOT_INITIALIZED;
+	}
 }
 
 void drv_servo_disable(void)
@@ -166,8 +190,10 @@ void drv_servo_disable(void)
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
 }
 
-void drv_servo_set(servo_id_t port, uint16_t value, bool force)
+drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force)
 {
+	drv_servo_status_t status = DRV_SERVO_SUCCESS;
+	
 	if ((value <= 180) && (port < SERVO_ID_MAX))
 	{
 		value = angle_to_pulse(port, value);
@@ -175,18 +201,25 @@ void drv_servo_set(servo_id_t port, uint16_t value, bool force)
 		if (force)
 		{
 			current_pwm[port] = value;
-			update_servo_pwm(port);
+			status = update_servo_pwm(port);
 		}			
 	}
+	else
+	{
+		status = DRV_SERVO_INVALID_PARAM;
+	}
+	return status;
 }
 
-bool drv_servo_update_servos_position(uint32_t time_passed)
+drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *is_idle)
 {
+	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, abs_diff, sign, d;
-	bool target_reached = true;
-  double de, delta = ((double)(3 * time_passed) / 50);
+  double de, delta = ((double)(speed * time_passed) / 64);
 	
-	for (servo_id_t port = SERVO_ID_FIRST; port < SERVO_ID_MAX; ++port)
+	*is_idle = true;
+	
+	for (servo_id_t port = SERVO_ID_FIRST; (port < SERVO_ID_MAX) && (status == DRV_SERVO_SUCCESS); ++port)
 	{
 		diff = target_pwm[port] - current_pwm[port];
 		if (diff)
@@ -205,14 +238,26 @@ bool drv_servo_update_servos_position(uint32_t time_passed)
 			{
 				current_pwm[port] += sign * d;
 			}
-			update_servo_pwm(port);
+			status = update_servo_pwm(port);
 
 			if (target_pwm[port] != current_pwm[port])
 			{
-				target_reached = false;
+				*is_idle = false;
 			}
 		}
 	}
+  return status;
+}
 
-  return target_reached;
+void drv_servo_set_speed(uint16_t servo_speed)
+{
+	if (servo_speed <= 10)
+	{
+		speed = servo_speed;
+	}
+}
+
+uint16_t drv_servo_get_speed(void)
+{
+	return speed;
 }

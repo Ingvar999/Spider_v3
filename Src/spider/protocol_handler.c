@@ -14,15 +14,96 @@
 #include "command_manager.h"
 #include "drv_uart.h"
 #include "drv_esp.h"
+#include "drv_servo.h"
 
 #define OUTPUT_BUFFER_SIZE				(128)
 #define RESP_HEADER_SIZE					(4)
+#define ADDITIONAL_BUFFER_SIZE		(OUTPUT_BUFFER_SIZE - RESP_HEADER_SIZE)
 
 static char output_string[OUTPUT_BUFFER_SIZE];
 
 static char *get_additional_info_buffer()
 {
 	return output_string + RESP_HEADER_SIZE;
+}
+
+static external_status_t process_action_request(char action, char request_id, int arg1, int arg2)
+{
+	external_status_t status = EXT_STATUS_OK;
+	
+	pending_task_ctx_t task;
+	switch (action) 
+	{
+		case 'h':
+			task.task_type = TASK_CHANGE_HEIGHT;
+		break;
+		default:
+			status = EXT_UNSUPPORTED_ACTION;
+	}
+	
+	if (status == EXT_STATUS_OK)
+	{
+		task.arg_1 = arg1;
+		task.arg_2 = arg2;
+		task.task_id = request_id;
+		if (cmd_mgr_add_task(&task) == CMD_MGR_QUEUE_IS_FULL)
+		{
+			status = EXT_QUEUE_IS_FULL;
+		}
+	}
+	
+	return status;
+}
+
+static external_status_t process_set_request(char property, int arg1, int arg2)
+{
+	external_status_t status = EXT_STATUS_OK;
+
+	switch (property) 
+	{
+		case 's':
+			if ((arg1 != CMD_PARAM_OMITTED) && (arg1 >= 1) && (arg1 <= 10))
+			{
+				drv_servo_set_speed(arg1);
+			}
+			else
+			{
+				status = EXT_INVALID_PARAMETERS;
+			}
+		break;
+		default:
+			status = EXT_UNSUPPORTED_PROPERTY;
+	}
+	
+	return status;
+}
+
+static external_status_t process_info_request(const char *property_list, int property_count, int *info_len)
+{
+	external_status_t status = EXT_STATUS_OK;
+	char *buffer = get_additional_info_buffer();
+	int len = 0;
+	
+	for (int i = 0; (i < property_count) && (len < ADDITIONAL_BUFFER_SIZE); ++i)
+	{
+		switch (property_list[i]) 
+		{
+			case 's':
+				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "%d", drv_servo_get_speed());
+			break;
+			default:
+				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "Unknown");
+		}
+		buffer[len++] = '\n';
+	}
+	
+	if (len >= ADDITIONAL_BUFFER_SIZE)
+	{
+		status = EXT_RESP_BUFFER_OVERFLOW;
+	}
+	*info_len = len;
+	
+	return status;
 }
 
 void protocol_handle(const char *input)
@@ -42,7 +123,7 @@ void protocol_handle(const char *input)
       request_type = input[1];
       switch (request_type) {
         case REQUEST_TYPE_INFO:
-          //status = spider->GetPropertyValues(data.substring(2), &buffer);
+          status = process_info_request(input + 2, msg_len - 2, &additional_info_len);
           break;
         case REQUEST_TYPE_ACTION: case REQUEST_TYPE_SET:
 					{
@@ -70,29 +151,11 @@ void protocol_handle(const char *input)
 					{
 						if (request_type == REQUEST_TYPE_ACTION)
 						{
-							pending_task_ctx_t task;
-							switch (input[2]) 
-							{
-								case 'h':
-									task.task_type = TASK_CHANGE_HEIGHT;
-								break;
-								default:
-									status = EXT_UNSUPPORTED_ACTION;
-							}
-							if (status == EXT_STATUS_OK)
-							{
-								task.arg_1 = arg1;
-								task.arg_2 = arg2;
-								task.task_id = request_id;
-								if (cmd_mgr_add_task(&task) == CMD_MGR_QUEUE_IS_FULL)
-								{
-									status = EXT_QUEUE_IS_FULL;
-								}
-							}
+							status = process_action_request(input[2], request_id, arg1, arg2);
 						}
-						else
+						else // request type SET
 						{
-							//request set
+							status = process_set_request(input[2], arg1, arg2);
 						}
 					}
           }

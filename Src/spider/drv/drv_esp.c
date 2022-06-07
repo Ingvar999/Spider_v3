@@ -17,8 +17,8 @@
 #define ESP_ERR														"ERROR"
 #define INVALID_CONNECTION_ID							'$'
 
-#define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r\n"), sizeof(cmd) + 1)
-#define SEND_ESP_TRANSFER_REQ(conn, len)	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPSEND=%c,%d\r\n", conn, len))
+#define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r"), sizeof(cmd) + 1)
+#define SEND_ESP_TRANSFER_REQ(conn, len)	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPSEND=%c,%d\r", conn, len))
 
 #define ESP_CMD_BUF_SIZE									(28)
 #define ESP_TX_DATA_BUF_QUEUE_SIZE				(2)
@@ -59,13 +59,13 @@ static void handle_disconnect(char connection)
 		active_connection = INVALID_CONNECTION_ID;
 		// handle global event
 	}
-	LOG_INFO("Disconnected %c\n", connection);
+	LOG_INFO("Disconnected %c", connection);
 }
 
 static void disconnect(char connection)
 {
-	LOG_INFO("Disconnect %c...\n", connection);
-	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPCLOSE=%c\r\n", connection));
+	LOG_INFO("Disconnect %c...", connection);
+	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPCLOSE=%c\r", connection));
 	esp_state = ESP_DISCONNECT;
 }
 
@@ -94,7 +94,7 @@ static void handle_event(const char* input)
 		{
 			disconnect(connection);
 		}
-		LOG_INFO("New connection %c\n", input[0]);
+		LOG_INFO("New connection %c", input[0]);
   }
   else if (str_starts_with(input + 2, "CLOSED") || str_starts_with(input + 2, "CONNECT FAIL"))
 	{
@@ -102,7 +102,7 @@ static void handle_event(const char* input)
   }
 	else
 	{
-		LOG_WARN("ESP Unhandled event: %s\n", input);
+		LOG_WARN("ESP Unhandled event: %s", input);
 	}
 }
 
@@ -110,18 +110,18 @@ void drv_esp_send(const char *data, int data_len)
 {
 	if (data_len > (ESP_TX_DATA_BUF_SIZE - sizeof(int)))
 	{
-		LOG_ERR("Too huge data to send via esp\n");
+		LOG_ERR("Too huge data to send via esp");
 	}
 	else
 	{
 		uint8_t *esp_buf;
 		if (active_connection == INVALID_CONNECTION_ID)
 		{
-			LOG_WARN("No active connection to send\n");
+			LOG_WARN("No active connection to send");
 		}
 		else if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, false)) == NULL)
 		{
-			LOG_ERR("ESP too busy for send request\n");
+			LOG_ERR("ESP too busy for send request");
 		}
 		else
 		{
@@ -132,7 +132,7 @@ void drv_esp_send(const char *data, int data_len)
 			}
 			else
 			{
-				LOG_DBG("Postpone esp send\n");
+				LOG_DBG("Postpone esp send");
 			}
 			*((int*) esp_buf) = data_len;
 			memcpy(esp_buf + sizeof(int), data, data_len);
@@ -153,7 +153,7 @@ void drv_esp_handle_input(const char *input)
 		}
 		else
 		{
-			LOG_DBG("ESP: %s\n", input);
+			LOG_DBG("ESP: %s", input);
 		}
 		
 		switch (esp_state)
@@ -210,7 +210,7 @@ void drv_esp_handle_input(const char *input)
 				}
 				else
 				{
-					LOG_WARN("Expected esp connection to close, got: %s\n");
+					LOG_WARN("Expected esp connection to close, got: %s");
 				}
 			break;
 			case ESP_SEND_1:
@@ -239,7 +239,7 @@ void drv_esp_handle_input(const char *input)
 				}
 			break;
 			case ESP_SEND_BUSY:
-				LOG_ERR("Esp BUSY\n");
+				LOG_ERR("Esp BUSY");
 			break;
 			default:
 				ASSERT(ASSERT_CODE_0E);

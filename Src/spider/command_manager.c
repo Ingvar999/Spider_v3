@@ -88,7 +88,7 @@ static void send_cmd_complition(cmd_mgr_status_t status)
 			ext_status = EXT_INVALID_POSITION;
 		break;
 		default:
-			LOG_ERR("Task completion status %d\n", status);
+			LOG_ERR("Task completion status %d", status);
 			ext_status = EXT_GENERIC_ERROR;
 	}
 	protocol_send_response(active_task_id, ext_status, 0);

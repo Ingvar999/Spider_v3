@@ -42,7 +42,7 @@
 
 #if (_LOG_LEVEL_ >= LOG_LEVEL_WARN)
 #define LOG_WARN(...)							log_printf(LOG_LEVEL_WARN, __VA_ARGS__)
-#define TODO(msg)									log_printf(LOG_LEVEL_NONE, "TODO: %s\n", msg)
+#define TODO(msg)									log_printf(LOG_LEVEL_NONE, "TODO: %s", msg)
 #else
 #define LOG_WARN(...)
 #define TODO(msg)
@@ -63,7 +63,7 @@
 #if TIMING_MEASURING_ENABLE
 #define TIMING_MES_VAR						uint32_t _timing_measurig_start = 0
 #define START_MESURE()						_timing_measurig_start = HAL_GetTick()
-#define END_MESURE(tag)						PRINTF("MEASURE " tag ": %ums\n", HAL_GetTick() - _timing_measurig_start);
+#define END_MESURE(tag)						PRINTF("MEASURE " tag ": %ums", HAL_GetTick() - _timing_measurig_start);
 #else
 #define TIMING_MES_VAR
 #define START_MESURE()

@@ -12,7 +12,7 @@
 
 void assert_impl(assert_code_t code)
 {
-	PRINTF("ASSERT: %02X !!!\n", code);
+	PRINTF("ASSERT: %02X !!!", code);
 	LED_ON(RED);
 	while(1);
 }
