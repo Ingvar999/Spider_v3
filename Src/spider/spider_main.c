@@ -108,7 +108,7 @@ void post_init_handler(void)
 		LOG_ERR("Citical VCC: %d", drv_sensors_get_vcc());
 	}
 	
-	pos_mgr_set_init_state(true);
+	pos_mgr_set_init_state();
 	
 	LOG_INFO("Init Done!");
 	END_MESURE("Init");
@@ -130,7 +130,7 @@ static void StartInputHandlerTask(void const * argument)
 				int val = atoi(cli_string + 1);
 				if (val >= 0 && val <= 180)
 				{
-					drv_servo_set(21, val, false);
+					drv_servo_set(SERVO_ID_ROTATION_5, val, false);
 				}
 			}
 			else if (cli_string[0] == 'e')

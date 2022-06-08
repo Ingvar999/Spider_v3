@@ -89,6 +89,23 @@ bool drv_sensors_is_leg_on_surface(uint8_t leg_id)
 	return processed_adc[leg_id] >= MIN_LEG_WORKLOAD;
 }
 
+bool drv_sensors_is_spider_on_surface(void)
+{
+	int legs_on_surface = 0;
+	
+	for (int i = 0; i < LEGS_COUNT; ++i)
+	{
+		if (drv_sensors_is_leg_on_surface(i))
+		{
+			if (++legs_on_surface == MIN_LEGS_ON_SURFACE)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void drv_sensors_get_legs_workload(uint16_t workload[LEGS_COUNT])
 {
 	memcpy(workload, (const void *)processed_adc, sizeof(uint16_t) * LEGS_COUNT);
@@ -96,7 +113,7 @@ void drv_sensors_get_legs_workload(uint16_t workload[LEGS_COUNT])
 
 void drv_sensors_print_adc(void)
 {
-	PRINTF("%4u, %4u, %4u, %4u, %4u, %4u, %4u, %4u", processed_adc[0], processed_adc[1], processed_adc[2], processed_adc[3], processed_adc[4], processed_adc[5], processed_adc[6], processed_adc[7]);
+	PRINTF("%4u, %4u, %4u, %4u, %4u, %4u, %4u", processed_adc[0], processed_adc[1], processed_adc[2], processed_adc[3], processed_adc[4], processed_adc[5], processed_adc[6]);
 #if (CHECK_ADC_DURATION)
 	PRINTF("adc last - %u, adc duration - %u", adc_last, adc_duration);
 #endif

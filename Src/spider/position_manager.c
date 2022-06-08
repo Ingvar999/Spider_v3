@@ -34,7 +34,38 @@ static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, 
 
 static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force);
 
-pos_mgr_status_t pos_mgr_set_init_state(bool force)
+int pos_mgr_get_global_h(void)
+{
+	return global_h;
+}
+int pos_mgr_get_global_r(void)
+{
+	return global_r;
+}
+int pos_mgr_get_leg_h(uint8_t leg_id)
+{
+	return legs_ctx[leg_id].current_h;
+}
+int pos_mgr_get_leg_r(uint8_t leg_id)
+{
+	return legs_ctx[leg_id].current_r;
+}
+
+void pos_mgr_set_fixed_leg(uint8_t leg_id)
+{
+	fixed_leg_id = leg_id;
+}
+void pos_mgr_reset_fixed_leg(void)
+{
+	fixed_leg_id = LEGS_COUNT;
+}
+
+bool pos_mgr_is_leg_fixed(void)
+{
+	return fixed_leg_id != LEGS_COUNT;
+}
+
+pos_mgr_status_t pos_mgr_set_init_state()
 {
 	global_h = BASIC_HEIGHT;
 	global_r = BASIC_RADIUS;
@@ -45,7 +76,7 @@ pos_mgr_status_t pos_mgr_set_init_state(bool force)
 		legs_ctx[leg_id].current_r = global_r;
 		legs_ctx[leg_id].rotation_angle = 90;
 		
-		pos_mgr_apply_leg_position(leg_id, force);
+		pos_mgr_apply_leg_position(leg_id, true);
 	}
 	return POS_MGR_SUCCESS;
 }
@@ -64,33 +95,83 @@ pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius)
   return status;
 }
 
-void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius)
+void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotation)
 {
-  legs_ctx[leg_id].current_h = height;
-  legs_ctx[leg_id].current_r = radius;
-  pos_mgr_apply_leg_position(leg_id, false);
+	if (leg_id != fixed_leg_id)
+	{
+		if (height != CMD_PARAM_OMITTED)
+		{
+			legs_ctx[leg_id].current_h = height;
+		}
+		if (radius != CMD_PARAM_OMITTED)
+		{
+			legs_ctx[leg_id].current_r = radius;
+		}
+		if (rotation != CMD_PARAM_OMITTED)
+		{
+			legs_ctx[leg_id].rotation_angle = rotation;
+		}
+		pos_mgr_apply_leg_position(leg_id, false);
+	}
 }
 
-pos_mgr_status_t pos_mgr_change_global_height(int h_delta)
+pos_mgr_status_t pos_mgr_set_global_height(int height)
 {
 	pos_mgr_status_t status = POS_MGR_SUCCESS;
 	
-	for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && status == POS_MGR_SUCCESS; ++leg_id)
+	if (height != BASIC_HEIGHT)
 	{
-	  if (leg_id != fixed_leg_id)
-		{
-			status = pos_mgr_check_leg_position(legs_ctx[leg_id].current_h + h_delta, legs_ctx[leg_id].current_r);
-		}
-	}
-	if (status == POS_MGR_SUCCESS){
+		int h_delta = height - global_h;
 		for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && status == POS_MGR_SUCCESS; ++leg_id)
 		{
 			if (leg_id != fixed_leg_id)
 			{
-				pos_mgr_set_leg_position(leg_id, legs_ctx[leg_id].current_h + h_delta, legs_ctx[leg_id].current_r);
+				status = pos_mgr_check_leg_position(legs_ctx[leg_id].current_h + h_delta, legs_ctx[leg_id].current_r);
 			}
 		}
-		global_h += h_delta;
+		if (status == POS_MGR_SUCCESS){
+			for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
+			{
+				pos_mgr_set_leg_position(leg_id, legs_ctx[leg_id].current_h + h_delta, CMD_PARAM_OMITTED, CMD_PARAM_OMITTED);
+			}
+			global_h = height;
+		}
+	}
+	else
+	{
+		for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
+		{
+			pos_mgr_set_leg_position(leg_id, height, CMD_PARAM_OMITTED, CMD_PARAM_OMITTED);
+		}
+		global_h = height;
+	}
+	return status;
+}
+
+pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force)
+{
+	pos_mgr_status_t status = POS_MGR_SUCCESS;
+	
+	if (force)
+	{
+		for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && status == POS_MGR_SUCCESS; ++leg_id)
+		{
+			if (leg_id != fixed_leg_id)
+			{
+				status = pos_mgr_check_leg_position(legs_ctx[leg_id].current_h, radius);
+			}
+		}
+		if (status == POS_MGR_SUCCESS){
+			for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
+			{
+				pos_mgr_set_leg_position(leg_id, CMD_PARAM_OMITTED, radius, CMD_PARAM_OMITTED);
+			}
+			global_r = radius;
+		}
+	}
+	else
+	{
+		global_r = radius;
 	}
 	return status;
 }

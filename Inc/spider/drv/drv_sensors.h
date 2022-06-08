@@ -18,6 +18,7 @@
 #define CRITICAL_VCC							(1564)			// 6600 mV
 
 #define MIN_LEG_WORKLOAD					(18)
+#define MIN_LEGS_ON_SURFACE				(2)
 
 void drv_sensors_init(void);
 
@@ -26,6 +27,7 @@ bool drv_sensors_is_low_vcc(void);
 bool drv_sensors_is_critical_vcc(void);
 
 bool drv_sensors_is_leg_on_surface(uint8_t leg_id);
+bool drv_sensors_is_spider_on_surface(void);
 void drv_sensors_get_legs_workload(uint16_t workload[LEGS_COUNT]);
 
 void drv_sensors_print_adc(void);

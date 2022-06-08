@@ -34,8 +34,14 @@ static external_status_t process_action_request(char action, char request_id, in
 	pending_task_ctx_t task;
 	switch (action) 
 	{
+		case 'b':
+			task.task_type = TASK_BASIC_POSITION;
+		break;
 		case 'h':
 			task.task_type = TASK_CHANGE_HEIGHT;
+		break;
+		case 'r':
+			task.task_type = TASK_SET_RADIUS;
 		break;
 		default:
 			status = EXT_UNSUPPORTED_ACTION;
