@@ -12,6 +12,7 @@
 #include "cmsis_os.h"
 #include "main.h"
 #include "log.h"
+#include "config.h"
 
 extern I2C_HandleTypeDef hi2c1;
 
@@ -56,7 +57,6 @@ static const uint16_t base_pulse[SERVO_ID_MAX] = {
 };
 
 static bool is_initialized = false;
-static uint16_t speed = 3;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
@@ -201,7 +201,7 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 {
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, abs_diff, sign, d;
-  double de, delta = ((double)(speed * time_passed) / 64);
+  double de, delta = ((double)(global_config.speed * time_passed) / 64);
 	
 	*is_idle = true;
 	
@@ -233,17 +233,4 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 		}
 	}
   return status;
-}
-
-void drv_servo_set_speed(uint16_t servo_speed)
-{
-	if (servo_speed <= 10)
-	{
-		speed = servo_speed;
-	}
-}
-
-uint16_t drv_servo_get_speed(void)
-{
-	return speed;
 }

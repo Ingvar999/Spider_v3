@@ -21,10 +21,9 @@
 #include "drv_esp.h"
 #include "drv_gyro.h"
 #include "drv_sensors.h"
+#include "services.h"
+#include "config.h"
 
-#define HEART_BEAT_DELAY					(25)
-#define LED_SWITCH_TIMEOUT				(3000)
-#define GYRO_UPDATE_TIMEOUT				(150)
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
@@ -80,7 +79,7 @@ void post_init_handler(void)
 	START_MESURE();
 	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_SYNC_MODE);
 	
-	drv_sensors_init();
+	init_config();
 	
 	bufq_init(&esp_input_queue, esp_input_buf, ESP_RX_BUF_SIZE, ESP_INPUT_QUEUE_SIZE);
 	drv_uart_start_input_handling(UART_ID_HOST, '\n', cli_event_handler);
@@ -98,7 +97,7 @@ void post_init_handler(void)
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
 	drv_gyro_init(16);
-	
+	drv_sensors_init();
 	if (!drv_sensors_is_critical_vcc())
 	{
 		drv_servo_enable();
@@ -181,34 +180,21 @@ static void StartInputHandlerTask(void const * argument)
 static void StartHeartBeatTask(void const * argument)
 {
 	static uint32_t last_wake_time;
-	static int led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
-	static int gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
 	
 	while (1)
 	{
 		last_wake_time = osKernelSysTick();
 		
-		if (led_counter-- == 0) 
+		bool is_idle;
+		if (drv_servo_update_servos_position(HEART_BEAT_DELAY, &is_idle) != DRV_SERVO_SUCCESS)
 		{
-			LED_CHANGE(GREEN);
-			if (drv_sensors_is_low_vcc())
-			{
-				LOG_WARN("Low Vcc");
-			}
-			led_counter = LED_SWITCH_TIMEOUT / HEART_BEAT_DELAY;
+			is_idle = false;
+			TODO("Send Servo error");
 		}
 		
-		if (gyro_counter-- == 0) 
-		{
-			if (drv_gyro_update(GYRO_UPDATE_TIMEOUT) == GYRO_NOT_INITIALIZED)
-			{
-				drv_gyro_init(1);
-			}
-			gyro_counter = GYRO_UPDATE_TIMEOUT / HEART_BEAT_DELAY;
-		}
+		process_services(&is_idle);
 		
-		bool is_idle = false;
-		if ((drv_servo_update_servos_position(HEART_BEAT_DELAY, &is_idle) == DRV_SERVO_SUCCESS) && is_idle)
+		if (is_idle)
 		{
 			if (osThreadResume(CommandManagerTaskHandle) != osOK)
 			{

@@ -141,6 +141,8 @@ static cmd_mgr_status_t basic_position_handler(int arg_1, int arg_2)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
 	
+	ASSERT_IF(ASSERT_CODE_10, task_ctx->task_type != TASK_BASIC_POSITION);
+	
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
 			pos_mgr_reset_fixed_leg();
@@ -170,6 +172,8 @@ static cmd_mgr_status_t basic_position_handler(int arg_1, int arg_2)
 static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_11, task_ctx->task_type != TASK_CHANGE_HEIGHT);
 
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:{
@@ -212,6 +216,8 @@ static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_12, task_ctx->task_type != TASK_SET_RADIUS);
 	
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:

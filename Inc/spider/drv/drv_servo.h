@@ -49,7 +49,4 @@ drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force);
 drv_servo_status_t drv_servo_enable(void);
 void drv_servo_disable(void);
 
-void drv_servo_set_speed(uint16_t speed);
-uint16_t drv_servo_get_speed(void);
-
 drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *is_idle);
