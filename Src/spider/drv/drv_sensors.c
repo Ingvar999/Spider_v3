@@ -20,6 +20,19 @@ extern ADC_HandleTypeDef hadc1, hadc2;
 static volatile uint16_t raw_adc[CHANNELS_NUMBER * SAMPLES_NUMBER];
 static volatile uint16_t processed_adc[CHANNELS_NUMBER];
 
+static const struct {
+	GPIO_TypeDef *port;
+	uint16_t pin;
+} leg_surface_detection_pins[LEGS_COUNT] = 
+{
+	{GPIOB, GPIO_PIN_11},
+	{GPIOB, GPIO_PIN_14},
+	{GPIOC, GPIO_PIN_11},
+	{GPIOC, GPIO_PIN_12},
+	{GPIOB, GPIO_PIN_10},
+	{GPIOB, GPIO_PIN_12}
+};
+
 #if (CHECK_ADC_DURATION)
 static volatile uint32_t adc_last, adc_duration;
 #endif
@@ -86,7 +99,7 @@ bool drv_sensors_is_critical_vcc(void)
 
 bool drv_sensors_is_leg_on_surface(uint8_t leg_id)
 {
-	return processed_adc[leg_id] >= MIN_LEG_WORKLOAD;
+	return HAL_GPIO_ReadPin(leg_surface_detection_pins[leg_id].port, leg_surface_detection_pins[leg_id].pin) == GPIO_PIN_RESET;
 }
 
 bool drv_sensors_is_spider_on_surface(void)
@@ -117,5 +130,7 @@ void drv_sensors_print_adc(void)
 #if (CHECK_ADC_DURATION)
 	PRINTF("adc last - %u, adc duration - %u", adc_last, adc_duration);
 #endif
+	PRINTF("Input: %d, %d, %d, %d, %d, %d", drv_sensors_is_leg_on_surface(0), drv_sensors_is_leg_on_surface(1), drv_sensors_is_leg_on_surface(2),
+																					drv_sensors_is_leg_on_surface(3), drv_sensors_is_leg_on_surface(4), drv_sensors_is_leg_on_surface(5));
 	PRINTF("VCC %u", drv_sensors_get_vcc());
 }

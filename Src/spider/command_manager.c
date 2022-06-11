@@ -33,6 +33,11 @@ typedef enum {
 typedef struct {
 	task_stage_t task_stage;
 	task_type_t task_type;
+	union {
+		struct {
+			int h_delta;
+		} change_height;
+	};
 } active_task_ctx_t;
 
 typedef cmd_mgr_status_t (*task_handler_t)(int arg1, int arg2);
@@ -172,39 +177,47 @@ static cmd_mgr_status_t basic_position_handler(int arg_1, int arg_2)
 static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 {
 	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	pos_mgr_status_t sub_status;
 	
 	ASSERT_IF(ASSERT_CODE_11, task_ctx->task_type != TASK_CHANGE_HEIGHT);
 
 	switch (task_ctx->task_stage){
-		case TASK_STAGE_1:{
-			if ((h_delta > -(L1 + L2)) && (h_delta < L1 + L2)){
-				/*bool reached = true;
-				if (!on_surface) {
-					status = ReachGround(&reached);
-					Height = MinHeight();
-				}
-				else {
-					status = STATUS_OK;
-				}*/
-
-				if (status == CMD_MGR_SUCCESS)
-				{
-					pos_mgr_status_t sub_status = pos_mgr_set_global_height(pos_mgr_get_global_h() + h_delta);
-					if (sub_status == POS_MGR_SUCCESS)
-					{
-						task_ctx->task_stage = TASK_STAGE_IDLE;
-					}
-					else
-					{
-						status = CMD_MGR_INVALID_POSITION;
-					}
-				}
+		case TASK_STAGE_1:
+			if ((h_delta > -(L1 + L2)) && (h_delta < L1 + L2))
+			{
+				task_ctx->change_height.h_delta = h_delta;
+				task_ctx->task_stage = TASK_STAGE_2;
 			}
 			else
 			{
 				status = CMD_MGR_INVALID_PARAMS;
+				break;
 			}
-		}
+		case TASK_STAGE_2:
+		{
+			bool reached = true;
+			if (task_ctx->change_height.h_delta > 0)
+			{
+				sub_status = pos_mgr_reach_surface(&reached);
+				if (sub_status != POS_MGR_SUCCESS)
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+				
+			}
+			if (reached && (status == CMD_MGR_SUCCESS))
+			{
+				sub_status = pos_mgr_set_global_height(pos_mgr_get_global_h() + task_ctx->change_height.h_delta);
+				if (sub_status == POS_MGR_SUCCESS)
+				{
+					task_ctx->task_stage = TASK_STAGE_IDLE;
+				}
+				else
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}			
+		}			
 		break;
 		default:
 		status = CMD_MGR_INVALID_TASK_STAGE;

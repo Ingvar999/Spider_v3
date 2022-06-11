@@ -12,7 +12,7 @@
 #define MIN_RADIUS					(15)
 #define DEFAULT_HEIGHT			(40)
 #define DEFAULT_RADIUS			(40)
-#define BASIC_HEIGHT				(0)
+#define BASIC_HEIGHT				(-5)
 #define BASIC_RADIUS				MIN_RADIUS
 
 
@@ -32,7 +32,9 @@ void pos_mgr_reset_fixed_leg(void);
 bool pos_mgr_is_leg_fixed(void);
 
 pos_mgr_status_t pos_mgr_set_init_state(void);
+
 void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotation);
 
+pos_mgr_status_t pos_mgr_reach_surface(bool *reached);
 pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force);
 pos_mgr_status_t pos_mgr_set_global_height(int height);

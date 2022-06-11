@@ -17,8 +17,8 @@
 #define ToGrad 57.3
 
 #define LEGS_COUNT												(6)
-#define L1 																(60)
-#define L2 																(60)
+#define L1 																(63)
+#define L2 																(63)
 
 #define CMD_PARAM_OMITTED									(0xFFFF)
  

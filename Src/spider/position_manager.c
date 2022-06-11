@@ -10,6 +10,7 @@
 #include "position_manager.h"
 #include "debug_utils.h"
 #include "drv_servo.h"
+#include "drv_sensors.h"
 #include "defines.h"
 
 typedef enum {
@@ -85,7 +86,7 @@ pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius)
 {
   pos_mgr_status_t status;
 	
-  if ((height >= 0) && (radius >= MIN_RADIUS) && (SQR(L1 + L2) > (SQR(height) + SQR(radius)))){
+  if ((radius >= MIN_RADIUS) && (SQR(L1 + L2) > (SQR(height) + SQR(radius)))){
     status = POS_MGR_SUCCESS;
   }
   else {
@@ -113,6 +114,44 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotati
 		}
 		pos_mgr_apply_leg_position(leg_id, false);
 	}
+}
+
+static int get_min_legs_height()
+{
+	int res = legs_ctx[0].current_h;
+	for (uint8_t leg_id = 1; leg_id < LEGS_COUNT; ++leg_id)
+	{
+		if (res > legs_ctx[leg_id].current_h)
+		{
+			res = legs_ctx[leg_id].current_h;
+		}
+	}
+	return res;
+}
+
+pos_mgr_status_t pos_mgr_reach_surface(bool *reached)
+{
+	*reached = true;
+	pos_mgr_status_t status = POS_MGR_SUCCESS;
+	const int h_delta = 4;
+	
+	for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && status == POS_MGR_SUCCESS; ++leg_id)
+	{
+		if ((leg_id != fixed_leg_id) && !drv_sensors_is_leg_on_surface(leg_id))
+		{
+			status = pos_mgr_check_leg_position(legs_ctx[leg_id].current_h + h_delta, legs_ctx[leg_id].current_r);
+			if (status == POS_MGR_SUCCESS)
+			{
+				pos_mgr_set_leg_position(leg_id, legs_ctx[leg_id].current_h + h_delta, CMD_PARAM_OMITTED, CMD_PARAM_OMITTED);
+				*reached = false;
+			}
+		}
+	}
+	if (!*reached)
+	{
+		global_h = get_min_legs_height();
+	}
+	return status;
 }
 
 pos_mgr_status_t pos_mgr_set_global_height(int height)
@@ -180,9 +219,10 @@ static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
   int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
+	double f = acos((double)(p_leg->current_h) / sqrt(r2));
+	int b = round((acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1)) + (p_leg->current_h < 0 ? Pi - f : f)) * ToGrad);
 	drv_servo_set((servo_id_t)(leg_servo_map[MOVING_SERVO_ID] + leg_id), 
 								180 - (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad), force);
-	drv_servo_set((servo_id_t)(leg_servo_map[CENTRAL_SERVO_ID] + leg_id), 
-								(uint8_t)round((acos((double)(p_leg->current_h) / sqrt(r2)) + acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1))) * ToGrad), force);
+	drv_servo_set((servo_id_t)(leg_servo_map[CENTRAL_SERVO_ID] + leg_id), b, force);
 	drv_servo_set((servo_id_t)(leg_servo_map[ROTATION_SERVO_ID] + leg_id), p_leg->rotation_angle, force);
 }
