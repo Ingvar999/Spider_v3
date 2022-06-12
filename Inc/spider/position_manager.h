@@ -34,6 +34,7 @@ bool pos_mgr_is_leg_fixed(void);
 
 pos_mgr_status_t pos_mgr_set_init_state(void);
 
+pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius);
 void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotation);
 
 pos_mgr_status_t pos_mgr_reach_surface(bool *reached);

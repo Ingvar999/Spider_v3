@@ -38,6 +38,10 @@ typedef struct {
 		struct {
 			int h_delta;
 		} change_height;
+		struct {
+			int radius;
+			uint8_t legs_group;
+		} set_radius;
 	};
 } active_task_ctx_t;
 
@@ -200,7 +204,7 @@ static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
-			if ((h_delta > -(L1 + L2)) && (h_delta < L1 + L2))
+			if ((h_delta != CMD_PARAM_OMITTED) && (h_delta > -(L1 + L2)) && (h_delta < L1 + L2))
 			{
 				task_ctx->change_height.h_delta = h_delta;
 				task_ctx->task_stage = TASK_STAGE_2;
@@ -253,7 +257,7 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 	
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
-			if ((radius >= MIN_RADIUS) && (radius < L1 + L2))
+			if ((radius != CMD_PARAM_OMITTED) && (radius >= MIN_RADIUS) && (radius < L1 + L2))
 			{
 				if (drv_sensors_is_spider_on_surface())
 				{
@@ -263,12 +267,28 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 					}
 					else
 					{
-						if (pos_mgr_get_global_h() >= LEG_LIFTING_HEIGHT)
+						task_ctx->set_radius.radius = radius;
+						task_ctx->set_radius.legs_group = 0;
+						pos_mgr_status_t sub_status = POS_MGR_SUCCESS;
+						for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && sub_status == POS_MGR_SUCCESS; ++leg_id)
 						{
+							sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - LEG_LIFTING_HEIGHT, pos_mgr_get_leg_r(leg_id));
+						}
+						if (sub_status == POS_MGR_SUCCESS)
+						{
+							task_ctx->task_stage = TASK_STAGE_3;
+						}
+						else
+						{
+							++task_ctx;
+							task_ctx->task_type = TASK_CHANGE_HEIGHT;
+							task_ctx->task_stage = TASK_STAGE_1;
+							status = change_height_handler(LEG_LIFTING_HEIGHT - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
+							bool done = task_ctx->task_stage == TASK_STAGE_IDLE;
+							--task_ctx;
 							
-							task_ctx->task_stage = TASK_STAGE_2;
-						}							
-						task_ctx->task_stage = TASK_STAGE_2;
+							task_ctx->task_stage = done ? TASK_STAGE_3 : TASK_STAGE_2;
+						}
 					}
 				}
 				else
@@ -289,8 +309,66 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 				status = CMD_MGR_INVALID_PARAMS;
 			}
 		break;
-		case TASK_STAGE_2:
-			task_ctx->task_stage = TASK_STAGE_IDLE;
+		case TASK_STAGE_2: // Wait Change Height is done
+		{
+			++task_ctx;
+			status = change_height_handler(0, 0);
+			bool done = task_ctx->task_stage == TASK_STAGE_IDLE;
+			--task_ctx;
+			if (done)
+			{
+				task_ctx->task_stage = TASK_STAGE_3;
+			}
+		}
+		break;
+		case TASK_STAGE_3: // Lift three legs
+			if (pos_mgr_lift_three_legs(task_ctx->set_radius.legs_group) == POS_MGR_SUCCESS)
+			{
+				task_ctx->task_stage = TASK_STAGE_4;
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_POSITION;
+			}
+		break;
+		case TASK_STAGE_4: // Set radius of three legs
+			for (uint8_t leg_id = task_ctx->set_radius.legs_group; leg_id < LEGS_COUNT && status == CMD_MGR_SUCCESS; leg_id += 2)
+			{
+				if (pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id), task_ctx->set_radius.radius) == POS_MGR_SUCCESS)
+				{
+					pos_mgr_set_leg_position(leg_id, CMD_PARAM_OMITTED, task_ctx->set_radius.radius, CMD_PARAM_OMITTED);
+				}
+				else
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}
+			task_ctx->task_stage = TASK_STAGE_5;
+		break;
+		case TASK_STAGE_5: // Fall three legs
+		{
+			bool done;
+			if (pos_mgr_fall_three_legs(task_ctx->set_radius.legs_group, &done) == POS_MGR_SUCCESS)
+			{
+				if (done)
+				{
+					if (task_ctx->set_radius.legs_group == 1)
+					{
+						pos_mgr_set_global_radius(task_ctx->set_radius.radius, false);
+						task_ctx->task_stage = TASK_STAGE_IDLE;
+					}
+					else
+					{
+						task_ctx->set_radius.legs_group = 1;
+						task_ctx->task_stage = TASK_STAGE_3;
+					}
+				}
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_POSITION;
+			}
+		}
 		break;
 		default:
 		status = CMD_MGR_INVALID_TASK_STAGE;

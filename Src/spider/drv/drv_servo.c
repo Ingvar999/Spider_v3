@@ -212,10 +212,10 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 {
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, abs_diff, sign, d;
-  double de, delta = ((double)(global_config.speed * time_passed)) / 10;
+  double delta = ((double)(global_config.speed * time_passed)) / 10;
 	if (accel_mode == FADING_SPEED)
 	{
-		delta /= 6;
+		delta /= 8;
 	}
 	
 	*is_idle = true;
@@ -230,14 +230,10 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 			
 			if (accel_mode == FADING_SPEED)
 			{
-				de = sqrt(abs_diff) * delta;
-			}
-			else
-			{
-				de = delta;
+				delta *= sqrt(abs_diff);
 			}
 			
-			d = (de < 2) ? 1 : (int)de;
+			d = (delta < 2) ? 1 : (int)delta;
 
 			if (d >= abs_diff)
 			{
