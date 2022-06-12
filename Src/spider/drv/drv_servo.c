@@ -26,6 +26,35 @@ extern I2C_HandleTypeDef hi2c1;
 #define PULSE_PER_DEGREE			(9)
 #define PCA_I2C_TIMEOT				(2)
 
+#define PCA9685_SET_BIT_MASK(BYTE, MASK)      ((BYTE) |= (uint8_t)(MASK))
+#define PCA9685_CLEAR_BIT_MASK(BYTE, MASK)    ((BYTE) &= (uint8_t)(~(uint8_t)(MASK)))
+#define PCA9685_READ_BIT_MASK(BYTE, MASK)     ((BYTE) & (uint8_t)(MASK))
+
+/**
+ * Registers addresses.
+ */
+typedef enum
+{
+	PCA9685_REGISTER_MODE1 = 0x00,
+	PCA9685_REGISTER_MODE2 = 0x01,
+	PCA9685_REGISTER_LED0_ON_L = 0x06,
+	PCA9685_REGISTER_ALL_LED_ON_L = 0xfa,
+	PCA9685_REGISTER_ALL_LED_ON_H = 0xfb,
+	PCA9685_REGISTER_ALL_LED_OFF_L = 0xfc,
+	PCA9685_REGISTER_ALL_LED_OFF_H = 0xfd,
+	PCA9685_REGISTER_PRESCALER = 0xfe
+} pca9685_register_t;
+
+/**
+ * Bit masks for the mode 1 register.
+ */
+typedef enum
+{
+	PCA9685_REGISTER_MODE1_SLEEP = (1u << 4u),
+	PCA9685_REGISTER_MODE1_AI = (1u << 5u),
+	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
+} pca9685_register_mode1_t;
+
 static const uint16_t base_pulse[SERVO_ID_MAX] = {
 	// Central servos
 	BASE_PULSE_MAX,
@@ -57,37 +86,19 @@ static const uint16_t base_pulse[SERVO_ID_MAX] = {
 };
 
 static bool is_initialized = false;
+static acceleration_mode_t accel_mode = FADING_SPEED;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
-#define PCA9685_SET_BIT_MASK(BYTE, MASK)      ((BYTE) |= (uint8_t)(MASK))
-#define PCA9685_CLEAR_BIT_MASK(BYTE, MASK)    ((BYTE) &= (uint8_t)(~(uint8_t)(MASK)))
-#define PCA9685_READ_BIT_MASK(BYTE, MASK)     ((BYTE) & (uint8_t)(MASK))
-
-/**
- * Registers addresses.
- */
-typedef enum
+acceleration_mode_t drv_servo_get_accel_mode(void)
 {
-	PCA9685_REGISTER_MODE1 = 0x00,
-	PCA9685_REGISTER_MODE2 = 0x01,
-	PCA9685_REGISTER_LED0_ON_L = 0x06,
-	PCA9685_REGISTER_ALL_LED_ON_L = 0xfa,
-	PCA9685_REGISTER_ALL_LED_ON_H = 0xfb,
-	PCA9685_REGISTER_ALL_LED_OFF_L = 0xfc,
-	PCA9685_REGISTER_ALL_LED_OFF_H = 0xfd,
-	PCA9685_REGISTER_PRESCALER = 0xfe
-} pca9685_register_t;
+	return accel_mode;
+}
 
-/**
- * Bit masks for the mode 1 register.
- */
-typedef enum
+void drv_servo_set_accel_mode(acceleration_mode_t mode)
 {
-	PCA9685_REGISTER_MODE1_SLEEP = (1u << 4u),
-	PCA9685_REGISTER_MODE1_AI = (1u << 5u),
-	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
-} pca9685_register_mode1_t;
+	accel_mode = mode;
+}
 
 static drv_servo_status_t pca9685_write_u8(uint8_t dev_addr, uint8_t address, uint8_t value)
 {
@@ -201,7 +212,11 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 {
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, abs_diff, sign, d;
-  double de, delta = ((double)(global_config.speed * time_passed) / 64);
+  double de, delta = ((double)(global_config.speed * time_passed)) / 10;
+	if (accel_mode == FADING_SPEED)
+	{
+		delta /= 6;
+	}
 	
 	*is_idle = true;
 	
@@ -212,7 +227,15 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 		{
 			sign = SIGN(diff);
 			abs_diff = sign * diff;
-			de = sqrt(abs_diff) * delta;
+			
+			if (accel_mode == FADING_SPEED)
+			{
+				de = sqrt(abs_diff) * delta;
+			}
+			else
+			{
+				de = delta;
+			}
 			
 			d = (de < 2) ? 1 : (int)de;
 

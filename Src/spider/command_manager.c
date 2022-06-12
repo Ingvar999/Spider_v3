@@ -14,6 +14,7 @@
 #include "queue.h"
 #include "protocol_handler.h"
 #include "drv_sensors.h"
+#include "drv_servo.h"
 
 #pragma anon_unions
 
@@ -151,12 +152,28 @@ static cmd_mgr_status_t basic_position_handler(int arg_1, int arg_2)
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
 			pos_mgr_reset_fixed_leg();
-			pos_mgr_set_global_height(BASIC_HEIGHT);
-			task_ctx->task_stage = TASK_STAGE_2;
+			if (pos_mgr_reset_global_height() == POS_MGR_SUCCESS)
+			{
+				task_ctx->task_stage = TASK_STAGE_2;
+			}
+			else
+			{
+				LOG_WARN("Force basic position");
+				pos_mgr_set_init_state();
+				task_ctx->task_stage = TASK_STAGE_IDLE;
+			}
 		break;
 		case TASK_STAGE_2:
-			pos_mgr_set_global_radius(BASIC_RADIUS, true);
-			task_ctx->task_stage = TASK_STAGE_3;
+			if (pos_mgr_set_global_radius(BASIC_RADIUS, true) == POS_MGR_SUCCESS)
+			{
+				task_ctx->task_stage = TASK_STAGE_3;
+			}
+			else
+			{
+				LOG_WARN("Force basic position");
+				pos_mgr_set_init_state();
+				task_ctx->task_stage = TASK_STAGE_IDLE;
+			}
 		break;
 		case TASK_STAGE_3:
 		{
@@ -198,6 +215,7 @@ static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 			bool reached = true;
 			if (task_ctx->change_height.h_delta > 0)
 			{
+				drv_servo_set_accel_mode(NO_ACCELERATION);
 				sub_status = pos_mgr_reach_surface(&reached);
 				if (sub_status != POS_MGR_SUCCESS)
 				{
@@ -207,7 +225,8 @@ static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2)
 			}
 			if (reached && (status == CMD_MGR_SUCCESS))
 			{
-				sub_status = pos_mgr_set_global_height(pos_mgr_get_global_h() + task_ctx->change_height.h_delta);
+				drv_servo_set_accel_mode(FADING_SPEED);
+				sub_status = pos_mgr_change_global_height(task_ctx->change_height.h_delta);
 				if (sub_status == POS_MGR_SUCCESS)
 				{
 					task_ctx->task_stage = TASK_STAGE_IDLE;
@@ -234,30 +253,44 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 	
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
-			if (drv_sensors_is_spider_on_surface())
+			if ((radius >= MIN_RADIUS) && (radius < L1 + L2))
 			{
-				if (pos_mgr_is_leg_fixed())
+				if (drv_sensors_is_spider_on_surface())
 				{
-					status = CMD_MGR_LEG_IS_FIXED;
+					if (pos_mgr_is_leg_fixed())
+					{
+						status = CMD_MGR_LEG_IS_FIXED;
+					}
+					else
+					{
+						if (pos_mgr_get_global_h() >= LEG_LIFTING_HEIGHT)
+						{
+							
+							task_ctx->task_stage = TASK_STAGE_2;
+						}							
+						task_ctx->task_stage = TASK_STAGE_2;
+					}
 				}
 				else
 				{
-					TODO("Set Radius on surface");
-					task_ctx->task_stage = TASK_STAGE_IDLE;
+					pos_mgr_status_t sub_status = pos_mgr_set_global_radius(radius, true);
+					if (sub_status == POS_MGR_SUCCESS)
+					{
+						task_ctx->task_stage = TASK_STAGE_IDLE;
+					}
+					else
+					{
+						status = CMD_MGR_INVALID_POSITION;
+					}
 				}
 			}
 			else
 			{
-				pos_mgr_status_t sub_status = pos_mgr_set_global_radius(radius, true);
-				if (sub_status == POS_MGR_SUCCESS)
-				{
-					task_ctx->task_stage = TASK_STAGE_IDLE;
-				}
-				else
-				{
-					status = CMD_MGR_INVALID_POSITION;
-				}
+				status = CMD_MGR_INVALID_PARAMS;
 			}
+		break;
+		case TASK_STAGE_2:
+			task_ctx->task_stage = TASK_STAGE_IDLE;
 		break;
 		default:
 		status = CMD_MGR_INVALID_TASK_STAGE;

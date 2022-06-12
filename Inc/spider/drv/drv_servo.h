@@ -44,9 +44,18 @@ typedef enum {
 	DRV_SERVO_GENERIC_ERROR
 } drv_servo_status_t;
 
+typedef enum {
+	NO_ACCELERATION,
+	FADING_SPEED,
+} acceleration_mode_t;
+
 drv_servo_status_t drv_servo_init(void);
 drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force);
+
 drv_servo_status_t drv_servo_enable(void);
 void drv_servo_disable(void);
+
+acceleration_mode_t drv_servo_get_accel_mode(void);
+void drv_servo_set_accel_mode(acceleration_mode_t mode);
 
 drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *is_idle);

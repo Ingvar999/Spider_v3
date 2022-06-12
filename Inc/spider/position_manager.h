@@ -12,9 +12,10 @@
 #define MIN_RADIUS					(15)
 #define DEFAULT_HEIGHT			(40)
 #define DEFAULT_RADIUS			(40)
-#define BASIC_HEIGHT				(-5)
-#define BASIC_RADIUS				MIN_RADIUS
-
+#define BASIC_HEIGHT				(-3)
+#define BASIC_RADIUS				(20)
+#define LEG_LIFTING_HEIGHT	(30)
+#define LEG_FALLING_STEP		(3)
 
 typedef enum {
 	POS_MGR_SUCCESS,
@@ -37,4 +38,8 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotati
 
 pos_mgr_status_t pos_mgr_reach_surface(bool *reached);
 pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force);
-pos_mgr_status_t pos_mgr_set_global_height(int height);
+pos_mgr_status_t pos_mgr_change_global_height(int h_delta);
+pos_mgr_status_t pos_mgr_reset_global_height(void);
+
+pos_mgr_status_t pos_mgr_fall_three_legs(uint8_t group, bool *reached);
+pos_mgr_status_t pos_mgr_lift_three_legs(uint8_t group);
