@@ -48,12 +48,12 @@ void cli_event_handler(const char *data, uint32_t len)
 		memcpy(cli_string, data, len);
 		cli_in_process = true;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			LED_ON(RED);
+			LED_CHANGE(RED);
 		}
 	}
 	else {
 		// HOST packet lost
-		LED_ON(RED);
+		LED_CHANGE(RED);
 	}
 }
 
@@ -89,7 +89,7 @@ void post_init_handler(void)
 	drv_servo_init();
 	cmd_mgr_init();
 	
-	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
+	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityAboveNormal, 0, configMINIMAL_STACK_SIZE);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
 	osThreadDef(HeartBeatTask, StartHeartBeatTask, osPriorityBelowNormal, 0, configMINIMAL_STACK_SIZE);
   HeartBeatTaskHandle = osThreadCreate(osThread(HeartBeatTask), NULL);

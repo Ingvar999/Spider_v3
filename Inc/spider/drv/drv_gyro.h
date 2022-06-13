@@ -8,6 +8,8 @@
 #pragma once
 #include <stdint.h>
 
+#define GYRO_LAYOUT_CORRECTION			(90.0)
+
 typedef enum 
 {
 	GYRO_STATUS_SUCCESS = 0,

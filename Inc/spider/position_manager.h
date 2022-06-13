@@ -32,6 +32,8 @@ void pos_mgr_set_fixed_leg(uint8_t leg_id);
 void pos_mgr_reset_fixed_leg(void);
 bool pos_mgr_is_leg_fixed(void);
 
+int pos_mgr_get_leg_layout(uint8_t leg_id);
+
 pos_mgr_status_t pos_mgr_set_init_state(void);
 
 pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius);

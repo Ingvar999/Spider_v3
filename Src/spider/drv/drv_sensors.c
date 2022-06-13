@@ -124,6 +124,16 @@ void drv_sensors_get_legs_workload(uint16_t workload[LEGS_COUNT])
 	memcpy(workload, (const void *)processed_adc, sizeof(uint16_t) * LEGS_COUNT);
 }
 
+uint32_t drv_sensors_get_whole_workload()
+{
+	uint32_t res = 0;
+	for (int i = 0; i < LEGS_COUNT; ++i)
+	{
+		res += processed_adc[i];
+	}
+	return res;
+}
+
 void drv_sensors_print_adc(void)
 {
 	PRINTF("%4u, %4u, %4u, %4u, %4u, %4u, %4u", processed_adc[0], processed_adc[1], processed_adc[2], processed_adc[3], processed_adc[4], processed_adc[5], processed_adc[6]);

@@ -19,6 +19,7 @@
 #define LEGS_COUNT												(6)
 #define L1 																(62)
 #define L2 																(62)
+#define BODY_RADIUS												(75)
 
 #define CMD_PARAM_OMITTED									(0xFFFF)
  

@@ -14,6 +14,7 @@
 #include "command_manager.h"
 #include "drv_uart.h"
 #include "drv_esp.h"
+#include "drv_gyro.h"
 #include "config.h"
 
 #define OUTPUT_BUFFER_SIZE				(128)
@@ -96,6 +97,19 @@ static external_status_t process_info_request(const char *property_list, int pro
 		{
 			case 's':
 				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "%d", global_config.speed);
+			break;
+			case 'p':
+			{
+				double horizontal, vertical;
+				if (drv_gyro_get_position(&horizontal, &vertical) == GYRO_STATUS_SUCCESS)
+				{
+					len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "%f %f", horizontal, vertical);
+				}
+				else
+				{
+					len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "Unavailable");
+				}
+			}
 			break;
 			default:
 				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "Unknown");

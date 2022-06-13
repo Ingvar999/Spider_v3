@@ -15,6 +15,7 @@
 #include "protocol_handler.h"
 #include "drv_sensors.h"
 #include "drv_servo.h"
+#include "services.h"
 
 #pragma anon_unions
 
@@ -125,6 +126,7 @@ cmd_mgr_status_t cmd_mgr_process(void)
 			task_ctx->task_stage = TASK_STAGE_1;
 			task_ctx->task_type = task.task_type;
 			active_task_id = task.task_id;
+			allow_position_control(false);
 			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
 			task_executed = true;
 		}
@@ -142,6 +144,7 @@ cmd_mgr_status_t cmd_mgr_process(void)
 		}
 		if (task_ctx->task_stage == TASK_STAGE_IDLE)
 		{
+			allow_position_control(true);
 			send_cmd_complition(status);
 		}
 	}

@@ -73,9 +73,6 @@ static double    base_x_gyro;
 static double    base_y_gyro;
 static double    base_z_gyro;
 
-static double    angle_horizontal;
-static double    angle_vertical;
-
 static bool is_initialized = false;
 
 static inline void set_last_read_angle_data(double x, double y, double x_gyro, double y_gyro, double z_gyro);
@@ -156,16 +153,6 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 			double angle_y = alpha * gyro_angle_y + (1.0 - alpha) * accel_angle_y;
 
 			set_last_read_angle_data(angle_x, angle_y, unfiltered_gyro_angle_x, unfiltered_gyro_angle_y, unfiltered_gyro_angle_z);
-
-			double x = tan(ToRad * angle_x);
-			double y = tan(ToRad * angle_y);
-			angle_horizontal = ToGrad * atan(x / y);
-			if (y < 0)
-				angle_horizontal += 90.0;
-			else
-				angle_horizontal -= 90.0;
-			angle_vertical = ToGrad * atan(sqrt(x * x + y * y));
-			//LOG_DBG("GYRO: %f - %f", angle_vertical, angle_horizontal);
 		}
 		else
 		{
@@ -186,8 +173,25 @@ drv_gyro_status_t drv_gyro_get_position(double *horizontal, double *vertical)
 	
 	if (is_initialized)
 	{
-		*horizontal = angle_horizontal;
-		*vertical = angle_vertical;
+		double temp_h;
+		double x = tan(ToRad * last_x_angle);
+		double y = tan(ToRad * last_y_angle);
+		
+		temp_h = ToGrad * atan(x / y);
+		temp_h += y < 0 ? 90 : -90;
+		
+		temp_h += GYRO_LAYOUT_CORRECTION;
+    if (temp_h < -180)
+		{
+			temp_h += 360;
+    }
+    else if (temp_h > 180)
+		{
+			temp_h -= 360;
+    }
+		
+		*horizontal = temp_h;
+		*vertical = ToGrad * atan(sqrt(x * x + y * y));
 	}
 	else
 	{

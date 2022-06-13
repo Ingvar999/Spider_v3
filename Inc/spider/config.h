@@ -12,6 +12,8 @@
 
 typedef struct {
 	int speed;
+	int position_v;
+	int position_h;
 } config_t;
 
 extern config_t global_config;

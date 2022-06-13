@@ -69,7 +69,7 @@ static const uint16_t base_pulse[SERVO_ID_MAX] = {
 	// Moving servos
 	BASE_PULSE_MIN,
 	BASE_PULSE_MIN,
-	BASE_PULSE_MAX,
+	BASE_PULSE_MIN,
 	BASE_PULSE_MIN,
 	BASE_PULSE_MID,
 	BASE_PULSE_MIN,
@@ -212,7 +212,7 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 {
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, abs_diff, sign, d;
-  double delta = ((double)(global_config.speed * time_passed)) / 10;
+  double de, delta = ((double)(global_config.speed * time_passed)) / 10;
 	if (accel_mode == FADING_SPEED)
 	{
 		delta /= 8;
@@ -230,10 +230,14 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 			
 			if (accel_mode == FADING_SPEED)
 			{
-				delta *= sqrt(abs_diff);
+				de = delta * sqrt(abs_diff);
+			}
+			else
+			{
+				de = delta;
 			}
 			
-			d = (delta < 2) ? 1 : (int)delta;
+			d = (de < 2) ? 1 : (int)de;
 
 			if (d >= abs_diff)
 			{

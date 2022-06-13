@@ -30,7 +30,7 @@ typedef struct {
 static uint8_t fixed_leg_id = LEGS_COUNT;
 static leg_ctx_t legs_ctx[LEGS_COUNT];
 static int global_h, global_r;
-static const int legs_layout[LEGS_COUNT] = {0, 60, 120, 180, -120, -60};
+static const int legs_layout[LEGS_COUNT] = {90, 30, -30, -90, -150, 150};
 static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, SERVO_ID_MOVING_0, SERVO_ID_ROTATION_0};
 
 static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force);
@@ -64,6 +64,11 @@ void pos_mgr_reset_fixed_leg(void)
 bool pos_mgr_is_leg_fixed(void)
 {
 	return fixed_leg_id != LEGS_COUNT;
+}
+
+int pos_mgr_get_leg_layout(uint8_t leg_id)
+{
+	return legs_layout[leg_id];
 }
 
 pos_mgr_status_t pos_mgr_set_init_state()
