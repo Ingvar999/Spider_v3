@@ -90,6 +90,27 @@ static acceleration_mode_t accel_mode = FADING_SPEED;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
+static uint8_t sqrt_map[] = {
+	0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 
+	4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 
+	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7,
+	7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8,
+	8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9,
+	9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+};
+
+static uint8_t int_sqrt(uint16_t val)
+{
+	if (val < sizeof(sqrt_map))
+	{
+		return sqrt_map[val];
+	}
+	else
+	{
+		return 10;
+	}
+}
+
 acceleration_mode_t drv_servo_get_accel_mode(void)
 {
 	return accel_mode;
@@ -211,8 +232,9 @@ drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force)
 drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *is_idle)
 {
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
-  int diff, abs_diff, sign, d;
-  double de, delta = ((double)(global_config.speed * time_passed)) / 10;
+  int diff, sign, d;
+	uint16_t abs_diff;
+  double de, delta = ((double)(global_config.speed * time_passed)) / 20;
 	if (accel_mode == FADING_SPEED)
 	{
 		delta /= 8;
@@ -226,11 +248,11 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 		if (diff)
 		{
 			sign = SIGN(diff);
-			abs_diff = sign * diff;
+			abs_diff = (uint16_t)(sign * diff);
 			
 			if (accel_mode == FADING_SPEED)
 			{
-				de = delta * sqrt(abs_diff);
+				de = delta * int_sqrt(abs_diff);
 			}
 			else
 			{

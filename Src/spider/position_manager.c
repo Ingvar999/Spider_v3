@@ -276,9 +276,10 @@ pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force)
 static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
-  int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
-	double f = acos((double)(p_leg->current_h) / sqrt(r2));
-	uint8_t b = round((acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * sqrt(r2) * L1)) + f) * ToGrad);
+  	int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
+	double r = sqrt(r2);
+	double f = acos((double)(p_leg->current_h) / r);
+	uint8_t b = round((acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * r * L1)) + f) * ToGrad);
 	uint8_t a = 180 - (uint8_t)round(acos((double)(SQR(L2) + SQR(L1) - r2) / (2 * L1 * L2)) * ToGrad);
 		
 	if ((a <= 180) && (b <= 180))

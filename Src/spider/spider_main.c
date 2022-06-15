@@ -48,12 +48,16 @@ void cli_event_handler(const char *data, uint32_t len)
 		memcpy(cli_string, data, len);
 		cli_in_process = true;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
-			LED_CHANGE(RED);
+			LED_ON(RED);
 		}
 	}
 	else {
+		if (cli_in_process)
+		{
+			osThreadResume(InputHandlerTaskHandle);
+		}
 		// HOST packet lost
-		LED_CHANGE(RED);
+		LED_ON(RED);
 	}
 }
 
@@ -89,11 +93,11 @@ void post_init_handler(void)
 	drv_servo_init();
 	cmd_mgr_init();
 	
-	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityAboveNormal, 0, configMINIMAL_STACK_SIZE);
+	osThreadDef(InputHandlerTask, StartInputHandlerTask, osPriorityAboveNormal, 0, configMINIMAL_STACK_SIZE * 4);
   InputHandlerTaskHandle = osThreadCreate(osThread(InputHandlerTask), NULL);
-	osThreadDef(HeartBeatTask, StartHeartBeatTask, osPriorityBelowNormal, 0, configMINIMAL_STACK_SIZE);
+	osThreadDef(HeartBeatTask, StartHeartBeatTask, osPriorityBelowNormal, 0, configMINIMAL_STACK_SIZE * 4);
   HeartBeatTaskHandle = osThreadCreate(osThread(HeartBeatTask), NULL);
-	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
+	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 4);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
 	drv_gyro_init(16);
@@ -171,9 +175,12 @@ static void StartInputHandlerTask(void const * argument)
 		}
 		
 		if (!cli_in_process && (bufq_get_read_buffer(&esp_input_queue, false) == NULL))
-			if (osThreadSuspend(osThreadGetId()) != osOK){
+		{
+			if (osThreadSuspend(osThreadGetId()) != osOK)
+			{
 				ASSERT(ASSERT_CODE_03);
 			}
+		}
 	}
 }
 
@@ -205,7 +212,7 @@ static void StartHeartBeatTask(void const * argument)
 		{
 			//LOG_DBG("Legs busy");
 		}
-		
+
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);
 	}
 }

@@ -70,11 +70,11 @@ static void gyro_control(int height_delta[LEGS_COUNT])
 		if ((abs_d(vertical - global_config.position_v) > MAX_SKEW_ANGLE) ||
 						 ((global_config.position_v != 0) && (abs_d(horizontal - global_config.position_h) > 4 * MAX_SKEW_ANGLE))) 
 		{
-			LOG_DBG("Gyro: %f %f", horizontal, vertical);
+			//LOG_DBG("Gyro: %f %f", horizontal, vertical);
 			double tanV = tan(vertical * ToRad);
 			double tanPV = tan(global_config.position_v * ToRad);
 			int leg_pos;
-
+			
 			for (int i = 0; i < LEGS_COUNT; ++i) 
 			{
 				leg_pos = pos_mgr_get_leg_layout(i);
@@ -113,7 +113,7 @@ static void position_control(uint32_t tick, bool *is_idle)
 	{
 		int height_delta[LEGS_COUNT] = {0};
 		
-		//workload_alignment(height_delta);
+		workload_alignment(height_delta);
 		gyro_control(height_delta);
 		height_control(height_delta);
 		
