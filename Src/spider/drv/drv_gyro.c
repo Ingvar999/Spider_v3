@@ -239,20 +239,17 @@ static void calibrate_sensors() {
   read_gyro_accel_vals((uint8_t *)&accel_t_gyro);
 
   for (int i = 0; i < num_readings; i++) {
+		HAL_Delay(INIT_SAMPLE_DELAY);
     read_gyro_accel_vals((uint8_t *)&accel_t_gyro);
     x_gyro += accel_t_gyro.value.x_gyro;
     y_gyro += accel_t_gyro.value.y_gyro;
     z_gyro += accel_t_gyro.value.z_gyro;
-    HAL_Delay(INIT_SAMPLE_DELAY);
   }
 	
-  x_gyro /= num_readings;
-  y_gyro /= num_readings;
-  z_gyro /= num_readings;
+  base_x_gyro = x_gyro / num_readings;
+  base_y_gyro = y_gyro / num_readings;
+  base_z_gyro = z_gyro / num_readings;
 
-  base_x_gyro = x_gyro;
-  base_y_gyro = y_gyro;
-  base_z_gyro = z_gyro;
 }
 
 static drv_gyro_status_t MPU6050_read(int addr, uint8_t *buffer, int size)

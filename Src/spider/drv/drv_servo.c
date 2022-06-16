@@ -90,7 +90,7 @@ static acceleration_mode_t accel_mode = FADING_SPEED;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
-static uint8_t sqrt_map[] = {
+static const uint8_t sqrt_map[] = {
 	0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 
 	4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 
 	6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7,
@@ -234,7 +234,7 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 	drv_servo_status_t status = DRV_SERVO_SUCCESS;
   int diff, sign, d;
 	uint16_t abs_diff;
-  double de, delta = ((double)(global_config.speed * time_passed)) / 20;
+  double de, delta = ((double)(global_config.speed * time_passed)) / 10;
 	if (accel_mode == FADING_SPEED)
 	{
 		delta /= 8;
