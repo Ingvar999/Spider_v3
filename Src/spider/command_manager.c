@@ -6,10 +6,10 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <math.h>
 #include "command_manager.h"
 #include "debug_utils.h"
 #include "position_manager.h"
-#include "defines.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "protocol_handler.h"
@@ -52,16 +52,25 @@ static xQueueHandle task_queue;
 static active_task_ctx_t _tasks_ctx[MAX_TASK_NESTING];
 static active_task_ctx_t *task_ctx;
 static char active_task_id;
+static bool abort_active_command = false;
 
 static cmd_mgr_status_t basic_position_handler(int h_delta, int arg_2);
 static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2);
 static cmd_mgr_status_t set_radius_handler(int height, int arg_2);
+static cmd_mgr_status_t temporal_turn_handler(int angle, int arg_2);
 
 static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	basic_position_handler,
 	change_height_handler,
-	set_radius_handler
+	set_radius_handler,
+	temporal_turn_handler,
+	0,
 };
+
+void cmd_mgr_abort_command(bool all, bool force)
+{
+	abort_active_command = true;
+}
 
 cmd_mgr_status_t cmd_mgr_init(void)
 {
@@ -127,6 +136,7 @@ cmd_mgr_status_t cmd_mgr_process(void)
 			task_ctx->task_type = task.task_type;
 			active_task_id = task.task_id;
 			allow_position_control(false);
+			abort_active_command = false;
 			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
 			task_executed = true;
 		}
@@ -371,6 +381,69 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 			{
 				status = CMD_MGR_INVALID_POSITION;
 			}
+		}
+		break;
+		default:
+		status = CMD_MGR_INVALID_TASK_STAGE;
+		break;
+	}
+	return status;
+}
+
+static cmd_mgr_status_t temporal_turn_handler(int angle, int arg_2)
+{
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_11, task_ctx->task_type != TASK_TEMPORAL_TURN);
+
+	switch (task_ctx->task_stage){
+		case TASK_STAGE_1:
+		{
+			if ((angle >= -MAX_TURN_ANGLE) && (angle <= MAX_TURN_ANGLE)) 
+			{
+				int angle3, x, new_r, r;
+				r = pos_mgr_get_global_r();
+    		angle3 = 90 - (angle / 2);
+    		x = round(3 * BODY_RADIUS * angle / 90.0);
+    		new_r = round(sqrt(SQR(r) + SQR(x) - 2 * x * r * cos(angle3 * ToRad)));
+    		if (SQR(L1 + L2) > SQR(pos_mgr_get_max_legs_height()) + SQR(new_r)) 
+				{
+      		int turn_angle = round(ToGrad * asin(r * sin(angle3 * ToRad) / new_r));
+      		if (angle < 0) 
+					{
+        		turn_angle = 180 - turn_angle;
+      		}
+     			for (int i = 0; i < LEGS_COUNT; ++i) 
+					{
+						pos_mgr_set_leg_position(i, CMD_PARAM_OMITTED, new_r, turn_angle);
+     			}
+					task_ctx->task_stage = TASK_STAGE_2;
+				}
+				else 
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}
+			else 
+			{
+				status = CMD_MGR_INVALID_PARAMS;
+			}
+		}
+		break;
+		case TASK_STAGE_2:
+			if (abort_active_command)
+			{
+				task_ctx->task_stage = TASK_STAGE_3;
+			}				
+		break;
+		case TASK_STAGE_3:
+		{
+			int r = pos_mgr_get_global_r();
+			for (int i = 0; i < LEGS_COUNT; ++i) 
+			{
+				pos_mgr_set_leg_position(i, CMD_PARAM_OMITTED, r, 90);
+     	}
+			task_ctx->task_stage = TASK_STAGE_IDLE;
 		}
 		break;
 		default:

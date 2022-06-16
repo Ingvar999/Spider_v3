@@ -27,6 +27,7 @@ int pos_mgr_get_global_h(void);
 int pos_mgr_get_global_r(void);
 int pos_mgr_get_leg_h(uint8_t leg_id);
 int pos_mgr_get_leg_r(uint8_t leg_id);
+int pos_mgr_get_max_legs_height(void);
 
 void pos_mgr_set_fixed_leg(uint8_t leg_id);
 void pos_mgr_reset_fixed_leg(void);

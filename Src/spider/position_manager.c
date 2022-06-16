@@ -133,10 +133,23 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotati
 
 static int get_min_legs_height()
 {
-	int res = legs_ctx[0].current_h;
-	for (uint8_t leg_id = 1; leg_id < LEGS_COUNT; ++leg_id)
+	int res = L1 + L2;
+	for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
 	{
-		if (res > legs_ctx[leg_id].current_h)
+		if ((res > legs_ctx[leg_id].current_h) && (leg_id != fixed_leg_id))
+		{
+			res = legs_ctx[leg_id].current_h;
+		}
+	}
+	return res;
+}
+
+int pos_mgr_get_max_legs_height(void)
+{
+	int res = -L1;
+	for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
+	{
+		if ((res < legs_ctx[leg_id].current_h) && (leg_id != fixed_leg_id))
 		{
 			res = legs_ctx[leg_id].current_h;
 		}

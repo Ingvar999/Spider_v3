@@ -27,10 +27,6 @@ extern I2C_HandleTypeDef hi2c1;
 #define FS_SEL 										(131.0)
 #define FS_SEL_ACCEL							(1) //(16384.0)
 
-#define Pi 3.1416
-#define ToRad 0.01745
-#define ToGrad 57.3
-
 typedef union
 {
   struct

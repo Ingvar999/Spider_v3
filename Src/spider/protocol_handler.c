@@ -46,6 +46,12 @@ static external_status_t process_action_request(char action, char request_id, in
 		case 'r':
 			task.task_type = TASK_SET_RADIUS;
 		break;
+		case 't':
+			task.task_type = TASK_TEMPORAL_TURN;
+		break;
+		case 'f':
+			task.task_type = TASK_FIXED_TURN;
+		break;
 		default:
 			status = EXT_UNSUPPORTED_ACTION;
 	}
@@ -127,6 +133,9 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 			{
       	status = EXT_INVALID_PARAMETERS;
       }
+		break;
+		case 'z':
+			cmd_mgr_abort_command(false, false);
 		break;
 		default:
 			status = EXT_UNSUPPORTED_PROPERTY;

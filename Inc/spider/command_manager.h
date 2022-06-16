@@ -7,6 +7,11 @@
 
 #pragma once
 
+
+#include "defines.h"
+
+#define MAX_TURN_ANGLE					(22)
+
 typedef enum {
 	CMD_MGR_SUCCESS,
 	CMD_MGR_QUEUE_IS_FULL,
@@ -21,6 +26,8 @@ typedef enum {
 	TASK_BASIC_POSITION,
 	TASK_CHANGE_HEIGHT,
 	TASK_SET_RADIUS,
+	TASK_TEMPORAL_TURN,
+	TASK_FIXED_TURN,
 	TASK_TYPE_LAST,
 } task_type_t;
 
@@ -36,4 +43,6 @@ cmd_mgr_status_t cmd_mgr_init(void);
 cmd_mgr_status_t cmd_mgr_add_task(pending_task_ctx_t *task_ctx);
 
 cmd_mgr_status_t cmd_mgr_process(void);
+
+void cmd_mgr_abort_command(bool all, bool force);
 
