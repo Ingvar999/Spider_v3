@@ -12,9 +12,11 @@
 #include "debug_utils.h"
 #include "defines.h"
 #include "command_manager.h"
+#include "position_manager.h"
 #include "drv_uart.h"
 #include "drv_esp.h"
 #include "drv_gyro.h"
+#include "drv_sensors.h"
 #include "config.h"
 
 #define OUTPUT_BUFFER_SIZE				(128)
@@ -62,6 +64,23 @@ static external_status_t process_action_request(char action, char request_id, in
 	return status;
 }
 
+static external_status_t set_bool(bool *dest, int val)
+{
+	if (val == CMD_PARAM_OMITTED)
+	{
+		*dest = !*dest;
+	}
+	else if ((val == 0) || (val == 1))
+	{
+		*dest = val ? true : false;
+	}
+	else
+	{
+		return EXT_INVALID_PARAMETERS;
+	}
+	return EXT_STATUS_OK;
+}
+
 static external_status_t process_set_request(char property, int arg1, int arg2)
 {
 	external_status_t status = EXT_STATUS_OK;
@@ -78,6 +97,37 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 				status = EXT_INVALID_PARAMETERS;
 			}
 		break;
+		case 'w':
+			status = set_bool(&global_config.workload_alignment_enable, arg1);
+		break;
+		case 'b':
+			status = set_bool(&global_config.gyro_control_enable, arg1);
+		break;
+		case 'x':
+			if (arg1 == CMD_PARAM_OMITTED)
+			{
+				pos_mgr_reset_fixed_leg();
+			}
+			else if ((arg1 >= 0) && (arg1 < 6))
+			{
+				pos_mgr_set_fixed_leg(arg1);
+			}
+			else
+			{
+				status = EXT_INVALID_PARAMETERS;
+			}
+		break;
+		case 'p':
+			if ((arg1 >= 0) && (arg1 < 30) && (arg2 >= -180) && (arg2 <= 180)) 
+			{
+      		global_config.position_v = arg1;
+      		global_config.position_h = arg2;
+      }
+      else 
+			{
+      	status = EXT_INVALID_PARAMETERS;
+      }
+		break;
 		default:
 			status = EXT_UNSUPPORTED_PROPERTY;
 	}
@@ -90,29 +140,52 @@ static external_status_t process_info_request(const char *property_list, int pro
 	external_status_t status = EXT_STATUS_OK;
 	char *buffer = get_additional_info_buffer();
 	int len = 0;
+	#define PUSH_INFO(...)			len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, __VA_ARGS__);
 	
 	for (int i = 0; (i < property_count) && (len < ADDITIONAL_BUFFER_SIZE); ++i)
 	{
 		switch (property_list[i]) 
 		{
 			case 's':
-				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "%d", global_config.speed);
+				PUSH_INFO("%d", global_config.speed);
 			break;
 			case 'p':
 			{
 				double horizontal, vertical;
 				if (drv_gyro_get_position(&horizontal, &vertical) == GYRO_STATUS_SUCCESS)
 				{
-					len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "%f %f", horizontal, vertical);
+					PUSH_INFO("%f %f", horizontal, vertical);
 				}
 				else
 				{
-					len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "Unavailable");
+					PUSH_INFO("Unavailable");
 				}
 			}
 			break;
+			case 'w':
+			{
+				uint16_t workload[LEGS_COUNT];
+				drv_sensors_get_legs_workload(workload);
+				PUSH_INFO("%d %d %d %d %d %d", workload[0], workload[1], workload[2], workload[3], workload[4], workload[5]);
+			}
+			break;
+			case 'h':
+				PUSH_INFO("%d", pos_mgr_get_global_h());
+			break;
+			case 'r':
+				PUSH_INFO("%d", pos_mgr_get_global_r());
+			break;
+			case 'v':
+				PUSH_INFO("%d", drv_sensors_get_vcc());
+			break;
+			case 'i':
+				PUSH_INFO("%d%d", global_config.gyro_control_enable, global_config.workload_alignment_enable);
+			break;
+			case 'q':
+				PUSH_INFO("%d %d", global_config.position_v, global_config.position_h);
+			break;
 			default:
-				len += snprintf(buffer + len, ADDITIONAL_BUFFER_SIZE - len, "Unknown");
+				PUSH_INFO("None");
 		}
 		buffer[len++] = '\n';
 	}

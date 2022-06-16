@@ -49,6 +49,17 @@ static void vcc_control(uint32_t tick)
 	}
 }
 
+static void surface_control(int height_delta[LEGS_COUNT])
+{
+	for (int i = 0; i < LEGS_COUNT; ++i) 
+	{
+		if (!drv_sensors_is_leg_on_surface(i))
+		{
+			height_delta[i] += LEG_FALLING_STEP;
+		}
+	}
+}
+
 static void workload_alignment(int height_delta[LEGS_COUNT])
 {
 	uint16_t workload[LEGS_COUNT];
@@ -113,8 +124,15 @@ static void position_control(uint32_t tick, bool *is_idle)
 	{
 		int height_delta[LEGS_COUNT] = {0};
 		
-		workload_alignment(height_delta);
-		gyro_control(height_delta);
+		surface_control(height_delta);
+		if (global_config.workload_alignment_enable)
+		{
+			workload_alignment(height_delta);
+		}
+		if (global_config.gyro_control_enable)
+		{
+			gyro_control(height_delta);
+		}
 		height_control(height_delta);
 		
 		pos_mgr_status_t status = POS_MGR_SUCCESS;
