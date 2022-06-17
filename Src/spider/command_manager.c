@@ -67,6 +67,9 @@ static cmd_mgr_status_t change_height_handler(int h_delta, int arg_2);
 static cmd_mgr_status_t set_radius_handler(int height, int arg_2);
 static cmd_mgr_status_t temporal_turn_handler(int angle, int arg_2);
 static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2);
+static cmd_mgr_status_t set_radius_fixed_leg_handler(int radius, int arg_2);
+static cmd_mgr_status_t change_fixed_leg_handler(int h_delta, int arg_2);
+static cmd_mgr_status_t turn_fixed_leg_handler(int angle, int arg_2);
 
 static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	basic_position_handler,
@@ -74,6 +77,9 @@ static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	set_radius_handler,
 	temporal_turn_handler,
 	fixed_turn_handler,
+	set_radius_fixed_leg_handler,
+	change_fixed_leg_handler,
+	turn_fixed_leg_handler,
 };
 
 static inline int abs_int(int val)
@@ -639,6 +645,99 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2)
 				status = CMD_MGR_INVALID_POSITION;
 			}
 		}
+		break;
+		default:
+		status = CMD_MGR_INVALID_TASK_STAGE;
+		break;
+	}
+	return status;
+}
+
+static cmd_mgr_status_t set_radius_fixed_leg_handler(int radius, int arg_2)
+{
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_15, task_ctx->task_type != TASK_SET_RADIUS_FIXED_LEG);
+	
+	switch (task_ctx->task_stage){
+		case TASK_STAGE_1:
+			if ((radius != CMD_PARAM_OMITTED) && (radius >= MIN_RADIUS) && (radius < L1 + L2))
+			{
+				if (pos_mgr_set_fixed_leg_position(0, radius, CMD_PARAM_OMITTED) == POS_MGR_SUCCESS)
+				{
+					task_ctx->task_stage = TASK_STAGE_IDLE;
+				}
+				else
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_PARAMS;
+			}
+		break;
+		default:
+		status = CMD_MGR_INVALID_TASK_STAGE;
+		break;
+	}
+	return status;
+}
+
+static cmd_mgr_status_t change_fixed_leg_handler(int h_delta, int arg_2)
+{
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_16, task_ctx->task_type != TASK_CHANGE_HEIGHT_FIXED_LEG);
+	
+	switch (task_ctx->task_stage){
+		case TASK_STAGE_1:
+			if ((h_delta != CMD_PARAM_OMITTED) && (h_delta > -(L1 + L2)) && (h_delta < L1 + L2))
+			{
+				if (pos_mgr_set_fixed_leg_position(h_delta, CMD_PARAM_OMITTED, CMD_PARAM_OMITTED) == POS_MGR_SUCCESS)
+				{
+					task_ctx->task_stage = TASK_STAGE_IDLE;
+				}
+				else
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_PARAMS;
+			}
+		break;
+		default:
+		status = CMD_MGR_INVALID_TASK_STAGE;
+		break;
+	}
+	return status;
+}
+
+static cmd_mgr_status_t turn_fixed_leg_handler(int angle, int arg_2)
+{
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_17, task_ctx->task_type != TASK_TURN_FIXED_LEG);
+	
+	switch (task_ctx->task_stage){
+		case TASK_STAGE_1:
+			if ((angle != CMD_PARAM_OMITTED) && (angle >= 0) && (angle <= 180))
+			{
+				if (pos_mgr_set_fixed_leg_position(0, CMD_PARAM_OMITTED, angle) == POS_MGR_SUCCESS)
+				{
+					task_ctx->task_stage = TASK_STAGE_IDLE;
+				}
+				else
+				{
+					status = CMD_MGR_INVALID_POSITION;
+				}
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_PARAMS;
+			}
 		break;
 		default:
 		status = CMD_MGR_INVALID_TASK_STAGE;

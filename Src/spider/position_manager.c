@@ -131,6 +131,33 @@ void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotati
 	}
 }
 
+pos_mgr_status_t pos_mgr_set_fixed_leg_position(int h_delta, int radius, int rotation)
+{
+	pos_mgr_status_t status = POS_MGR_SUCCESS;
+	if (fixed_leg_id < LEGS_COUNT)
+	{
+		int height = legs_ctx[fixed_leg_id].current_h + h_delta;
+
+		if (radius == CMD_PARAM_OMITTED)
+		{
+			radius = legs_ctx[fixed_leg_id].current_r;
+		}
+		status = pos_mgr_check_leg_position(height, radius);
+		
+		if (status == POS_MGR_SUCCESS)
+		{
+			legs_ctx[fixed_leg_id].current_h = height;
+			legs_ctx[fixed_leg_id].current_r = radius;
+			if (rotation != CMD_PARAM_OMITTED)
+			{
+				legs_ctx[fixed_leg_id].rotation_angle = rotation;
+			}
+			pos_mgr_apply_leg_position(fixed_leg_id, false);
+		}
+	}
+	return status;
+}
+
 static int get_min_legs_height()
 {
 	int res = L1 + L2;
