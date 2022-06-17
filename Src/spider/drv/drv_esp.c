@@ -17,8 +17,8 @@
 #define ESP_ERR														"ERROR"
 #define INVALID_CONNECTION_ID							'$'
 
-#define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r"), sizeof(cmd) + 1)
-#define SEND_ESP_TRANSFER_REQ(conn, len)	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPSEND=%c,%d\r", conn, len))
+#define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r\n"), sizeof(cmd) + 1)
+#define SEND_ESP_TRANSFER_REQ(conn, len)	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPSEND=%c,%d\r\n", conn, len))
 
 #define ESP_CMD_BUF_SIZE									(28)
 #define ESP_TX_DATA_BUF_QUEUE_SIZE				(2)
@@ -65,7 +65,7 @@ static void handle_disconnect(char connection)
 static void disconnect(char connection)
 {
 	LOG_INFO("Disconnect %c...", connection);
-	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPCLOSE=%c\r", connection));
+	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPCLOSE=%c\r\n", connection));
 	esp_state = ESP_DISCONNECT;
 }
 
@@ -144,8 +144,8 @@ void drv_esp_handle_input(const char *input)
 {
 	if (input[0] != '\r')
 	{
-		bool is_ok = str_starts_with(input, ESP_OK) ? true : false;
-		bool is_err = str_starts_with(input, ESP_ERR) ? true : false;
+		bool is_ok = str_starts_with(input, ESP_OK);
+		bool is_err = str_starts_with(input, ESP_ERR);
 		
 		if (is_err)
 		{

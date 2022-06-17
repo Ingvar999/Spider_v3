@@ -100,6 +100,7 @@ void post_init_handler(void)
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 4);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
+	
 	drv_gyro_init(16);
 	drv_sensors_init();
 	if (!drv_sensors_is_critical_vcc())
@@ -115,7 +116,7 @@ void post_init_handler(void)
 	
 	LOG_INFO("Init Done!");
 	END_MESURE("Init");
-	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);
+	drv_uart_set_transfer_mode(UART_ID_HOST, TRANSFER_ASYNC_MODE);	
 }
 
 static void StartInputHandlerTask(void const * argument)
@@ -128,17 +129,17 @@ static void StartInputHandlerTask(void const * argument)
 			{
 				drv_sensors_print_adc();
 			}
-			else if (cli_string[0] == 's')
+			/*else if (cli_string[0] == 's')
 			{
 				int val = atoi(cli_string + 1);
 				if (val >= 0 && val <= 180)
 				{
 					drv_servo_set(SERVO_ID_ROTATION_5, val, false);
 				}
-			}
+			}*/
 			else if (cli_string[0] == 'e')
 			{
-				if (str_starts_with(cli_string + 1, "esp"))
+				if (str_starts_with(cli_string, "esp"))
 				{
 					is_esp_config_mode = !is_esp_config_mode;
 					LOG_INFO("ESP config mode: %d", is_esp_config_mode);
