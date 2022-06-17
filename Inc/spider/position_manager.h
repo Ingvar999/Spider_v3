@@ -42,6 +42,8 @@ pos_mgr_status_t pos_mgr_set_init_state(void);
 pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius);
 void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotation);
 pos_mgr_status_t pos_mgr_set_fixed_leg_position(int h_delta, int radius, int rotation);
+void pos_mgr_return_fixed_leg(void);
+pos_mgr_status_t pos_mgr_fall_fixed_leg(bool *reached);
 
 pos_mgr_status_t pos_mgr_reach_surface(bool *reached);
 pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force);

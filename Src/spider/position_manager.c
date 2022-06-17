@@ -34,6 +34,7 @@ static const int legs_layout[LEGS_COUNT] = {90, 30, -30, -90, -150, 150};
 static const servo_id_t leg_servo_map[LEG_SERVO_ID_LAST] = {SERVO_ID_CENTRAL_0, SERVO_ID_MOVING_0, SERVO_ID_ROTATION_0};
 
 static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force);
+static pos_mgr_status_t reach_surface(bool *reached, uint8_t start_leg, uint8_t inc);
 
 int pos_mgr_get_global_h(void)
 {
@@ -153,6 +154,35 @@ pos_mgr_status_t pos_mgr_set_fixed_leg_position(int h_delta, int radius, int rot
 				legs_ctx[fixed_leg_id].rotation_angle = rotation;
 			}
 			pos_mgr_apply_leg_position(fixed_leg_id, false);
+		}
+	}
+	return status;
+}
+
+void pos_mgr_return_fixed_leg(void)
+{
+	if (fixed_leg_id < LEGS_COUNT)
+	{
+		legs_ctx[fixed_leg_id].current_h = 0;
+		legs_ctx[fixed_leg_id].current_r = global_r;
+		legs_ctx[fixed_leg_id].rotation_angle = 90;
+
+		pos_mgr_apply_leg_position(fixed_leg_id, false);
+	}
+}
+
+pos_mgr_status_t pos_mgr_fall_fixed_leg(bool *reached)
+{
+	*reached = true;
+	pos_mgr_status_t status = POS_MGR_SUCCESS;
+	
+	if ((fixed_leg_id < LEGS_COUNT) && !drv_sensors_is_leg_on_surface(fixed_leg_id))
+	{
+		status = pos_mgr_check_leg_position(legs_ctx[fixed_leg_id].current_h + LEG_FALLING_STEP, legs_ctx[fixed_leg_id].current_r);
+		if (status == POS_MGR_SUCCESS)
+		{
+			pos_mgr_set_fixed_leg_position(LEG_FALLING_STEP, CMD_PARAM_OMITTED, CMD_PARAM_OMITTED);
+			*reached = false;
 		}
 	}
 	return status;

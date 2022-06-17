@@ -70,6 +70,7 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2);
 static cmd_mgr_status_t set_radius_fixed_leg_handler(int radius, int arg_2);
 static cmd_mgr_status_t change_fixed_leg_handler(int h_delta, int arg_2);
 static cmd_mgr_status_t turn_fixed_leg_handler(int angle, int arg_2);
+static cmd_mgr_status_t return_fixed_leg_handler(int arg_1, int arg_2);
 
 static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	basic_position_handler,
@@ -80,6 +81,7 @@ static const task_handler_t task_handlers[TASK_TYPE_LAST] = {
 	set_radius_fixed_leg_handler,
 	change_fixed_leg_handler,
 	turn_fixed_leg_handler,
+	return_fixed_leg_handler,
 };
 
 static inline int abs_int(int val)
@@ -738,6 +740,40 @@ static cmd_mgr_status_t turn_fixed_leg_handler(int angle, int arg_2)
 			{
 				status = CMD_MGR_INVALID_PARAMS;
 			}
+		break;
+		default:
+		status = CMD_MGR_INVALID_TASK_STAGE;
+		break;
+	}
+	return status;
+}
+
+static cmd_mgr_status_t return_fixed_leg_handler(int arg_1, int arg_2)
+{
+	cmd_mgr_status_t status = CMD_MGR_SUCCESS;
+	
+	ASSERT_IF(ASSERT_CODE_18, task_ctx->task_type != TASK_RETURN_FIXED_LEG);
+	
+	switch (task_ctx->task_stage){
+		case TASK_STAGE_1:
+			pos_mgr_return_fixed_leg();
+			task_ctx->task_stage = drv_sensors_is_spider_on_surface() ? TASK_STAGE_2 : TASK_STAGE_IDLE;
+		break;
+		case TASK_STAGE_2:
+		{
+			bool done;
+			if (pos_mgr_fall_fixed_leg(&done) == POS_MGR_SUCCESS)
+			{
+				if (done)
+				{
+					task_ctx->task_stage = TASK_STAGE_IDLE;
+				}
+			}
+			else
+			{
+				status = CMD_MGR_INVALID_POSITION;
+			}
+		}
 		break;
 		default:
 		status = CMD_MGR_INVALID_TASK_STAGE;

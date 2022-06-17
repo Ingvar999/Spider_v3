@@ -61,6 +61,9 @@ static external_status_t process_action_request(char action, char request_id, in
 		case ')':
 			task.task_type = TASK_TURN_FIXED_LEG;
 		break;
+		case '+':
+			task.task_type = TASK_RETURN_FIXED_LEG;
+		break;
 		default:
 			status = EXT_UNSUPPORTED_ACTION;
 	}
