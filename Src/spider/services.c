@@ -16,11 +16,6 @@
 
 static bool position_control_allowed = false;
 
-static inline double abs_d(double val)
-{
-	return val < 0 ? -val : val;
-}
-
 void allow_position_control(bool val)
 {
 	position_control_allowed = val;
@@ -78,8 +73,8 @@ static void gyro_control(int height_delta[LEGS_COUNT])
 	
 	if (drv_gyro_get_position(&horizontal, &vertical) == GYRO_STATUS_SUCCESS)
 	{
-		if ((abs_d(vertical - global_config.position_v) > MAX_SKEW_ANGLE) ||
-						 ((global_config.position_v != 0) && (abs_d(horizontal - global_config.position_h) > 4 * MAX_SKEW_ANGLE))) 
+		if ((fabs(vertical - global_config.position_v) > MAX_SKEW_ANGLE) ||
+						 ((global_config.position_v != 0) && (fabs(horizontal - global_config.position_h) > 4 * MAX_SKEW_ANGLE))) 
 		{
 			//LOG_DBG("Gyro: %f %f", horizontal, vertical);
 			double tanV = tan(vertical * ToRad);

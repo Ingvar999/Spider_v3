@@ -10,8 +10,6 @@
 
 #include "defines.h"
 
-#define MAX_TURN_ANGLE					(22)
-
 typedef enum {
 	CMD_MGR_SUCCESS,
 	CMD_MGR_QUEUE_IS_FULL,
