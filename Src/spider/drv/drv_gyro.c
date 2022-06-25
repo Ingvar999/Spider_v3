@@ -15,7 +15,7 @@
 extern I2C_HandleTypeDef hi2c1;
 
 #define I2C_HANDLER								(&hi2c1)
-#define I2C_TIMEOUT								(30)
+#define I2C_TIMEOUT								(5)
 #define INIT_SAMPLE_DELAY					(50)
 #define MPU6050_SMPLRT_DIV				(0x19)
 #define MPU6050_ACCEL_XOUT_H      (0x3B)
@@ -150,10 +150,6 @@ drv_gyro_status_t drv_gyro_update(uint32_t time_passed)
 
 			set_last_read_angle_data(angle_x, angle_y, unfiltered_gyro_angle_x, unfiltered_gyro_angle_y, unfiltered_gyro_angle_z);
 		}
-		else
-		{
-			LOG_ERR("Read Gyro values failed");
-		}
 	}
 	else
 	{
@@ -253,13 +249,11 @@ static drv_gyro_status_t MPU6050_read(int addr, uint8_t *buffer, int size)
 	drv_gyro_status_t status = GYRO_STATUS_SUCCESS;
 	
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read(I2C_HANDLER, MPU6050_I2C_ADDRESS, addr, 1, buffer, size, I2C_TIMEOUT);
-	if (hal_status == HAL_TIMEOUT)
+	
+	if (hal_status != HAL_OK)
 	{
-		status = GYRO_TIMEOUT;
-	}
-	else if (hal_status != HAL_OK)
-	{
-		status = GYRO_GENERIC_ERROR;
+		LOG_ERR("Read Gyro values failed: status - %d", hal_status);
+		status = (hal_status == HAL_TIMEOUT) ? GYRO_TIMEOUT : GYRO_GENERIC_ERROR;
 	}
 	
 	return status;

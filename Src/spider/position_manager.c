@@ -346,7 +346,7 @@ pos_mgr_status_t pos_mgr_set_global_radius(int radius, bool force)
 static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force)
 {
 	leg_ctx_t *p_leg = &legs_ctx[leg_id];
-  	int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
+  int r2 = SQR(p_leg->current_h) + SQR(p_leg->current_r);
 	double r = sqrt(r2);
 	double f = acos((double)(p_leg->current_h) / r);
 	uint8_t b = round((acos((double)(r2 + SQR(L1) - SQR(L2)) / (2 * r * L1)) + f) * ToGrad);
@@ -362,4 +362,15 @@ static void pos_mgr_apply_leg_position(uint8_t leg_id, bool force)
 	{
 		LOG_ERR("Unreachable servo angle, leg: %d", leg_id);
 	}
+}
+
+pos_mgr_status_t pos_mgr_prepare_leg_step(uint8_t leg_id, int direction, uint16_t* new_r, uint16_t* turn_angle)
+{
+  direction -= legs_layout[leg_id];
+	double rad_direction = direction * ToRad;
+	
+  int r = round(sqrt(SQR(global_r) + SQR(STEP_LENGTH) + 2 * STEP_LENGTH * global_r * cos(rad_direction)));
+  *turn_angle = 90 - round(ToGrad * asin(-STEP_LENGTH * sin(rad_direction) / r));
+  *new_r = global_r + round(0.6 * (r - global_r));
+  return pos_mgr_check_leg_position(legs_ctx[leg_id].current_h, *new_r);
 }

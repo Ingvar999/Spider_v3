@@ -10,14 +10,15 @@
 #include "defines.h"
 
 #define MIN_RADIUS							(15)
-#define DEFAULT_HEIGHT					(40)
-#define DEFAULT_RADIUS					(40)
+#define DEFAULT_HEIGHT					(35)
+#define DEFAULT_RADIUS					(35)
 #define BASIC_HEIGHT						(-3)
 #define BASIC_RADIUS						(20)
 #define LEG_LIFTING_HEIGHT			(20)
 #define LEG_FALLING_STEP				(3)
 #define MAX_TEMP_TURN_ANGLE			(22)
 #define MAX_TURN_ANGLE					(10)
+#define STEP_LENGTH							(25)
 
 typedef enum {
 	POS_MGR_SUCCESS,
@@ -52,3 +53,5 @@ pos_mgr_status_t pos_mgr_reset_global_height(void);
 
 pos_mgr_status_t pos_mgr_fall_three_legs(uint8_t group, bool *reached);
 pos_mgr_status_t pos_mgr_lift_three_legs(uint8_t group);
+
+pos_mgr_status_t pos_mgr_prepare_leg_step(uint8_t leg_id, int direction, uint16_t* new_r, uint16_t* turn_angle);

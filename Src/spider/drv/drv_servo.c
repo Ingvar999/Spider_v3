@@ -24,7 +24,7 @@ extern I2C_HandleTypeDef hi2c1;
 #define BASE_PULSE_MAX				(460)
 #define PULSE_RANGE						(1620)
 #define PULSE_PER_DEGREE			(9)
-#define PCA_I2C_TIMEOT				(2)
+#define PCA_I2C_TIMEOT				(5)
 
 #define PCA9685_SET_BIT_MASK(BYTE, MASK)      ((BYTE) |= (uint8_t)(MASK))
 #define PCA9685_CLEAR_BIT_MASK(BYTE, MASK)    ((BYTE) &= (uint8_t)(~(uint8_t)(MASK)))

@@ -33,8 +33,8 @@ static char *get_additional_info_buffer()
 static external_status_t process_action_request(char action, char request_id, int arg1, int arg2)
 {
 	external_status_t status = EXT_STATUS_OK;
-	
 	pending_task_ctx_t task;
+	
 	switch (action) 
 	{
 		case 'b':
@@ -64,6 +64,9 @@ static external_status_t process_action_request(char action, char request_id, in
 		case '+':
 			task.task_type = TASK_RETURN_FIXED_LEG;
 		break;
+		case 'w':
+			task.task_type = TASK_WALK;
+		break;
 		default:
 			status = EXT_UNSUPPORTED_ACTION;
 	}
@@ -73,7 +76,7 @@ static external_status_t process_action_request(char action, char request_id, in
 		task.arg_1 = arg1;
 		task.arg_2 = arg2;
 		task.task_id = request_id;
-		if (cmd_mgr_add_task(&task) == CMD_MGR_QUEUE_IS_FULL)
+		if (cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS)
 		{
 			status = EXT_QUEUE_IS_FULL;
 		}
