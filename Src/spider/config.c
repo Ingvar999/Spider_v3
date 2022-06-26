@@ -82,7 +82,7 @@ config_status_t persist_config(void)
 		FLASH_EraseInitTypeDef erase_typedef;
 	
 		erase_typedef.TypeErase = FLASH_TYPEERASE_SECTORS;
-		erase_typedef.Sector = FLASH_SECTOR_0;
+		erase_typedef.Sector = CONFIG_FLASH_SECTOR;
 		erase_typedef.NbSectors = 1;
 		erase_typedef.VoltageRange = FLASH_VOLTAGE_RANGE_3;
 		if (HAL_FLASHEx_Erase(&erase_typedef, &sector) == HAL_OK)

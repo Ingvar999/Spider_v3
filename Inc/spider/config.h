@@ -10,7 +10,8 @@
 
 #include "defines.h"
 
-#define CONFIG_FLASH_ADDR						(0x08000000)
+#define CONFIG_FLASH_ADDR						(0x0800C000)
+#define CONFIG_FLASH_SECTOR					FLASH_SECTOR_3
 #define CONFIG_FLASH_MAGIC					(0xFAAC8CE1)
 
 typedef enum {
