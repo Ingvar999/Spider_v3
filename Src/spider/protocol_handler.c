@@ -152,6 +152,24 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 		case 'z':
 			cmd_mgr_abort_command(false, false);
 		break;
+		case 't':
+			if (reset_config() != CFG_SUCCESS)
+			{
+				status = EXT_GENERIC_ERROR;
+			}
+		break;
+		case 'y':
+			if (persist_config() != CFG_SUCCESS)
+			{
+				status = EXT_GENERIC_ERROR;
+			}
+		break;
+		case 'u':
+			if (restore_config() != CFG_SUCCESS)
+			{
+				status = EXT_GENERIC_ERROR;
+			}
+		break;
 		default:
 			status = EXT_UNSUPPORTED_PROPERTY;
 	}

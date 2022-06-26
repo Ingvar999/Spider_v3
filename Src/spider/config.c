@@ -57,7 +57,7 @@ config_status_t restore_config(void)
 	config_status_t status = CFG_SUCCESS;
 	const flash_config_t *cfg = (void*)CONFIG_FLASH_ADDR;
 	
-	if ((cfg->magic == CONFIG_FLASH_MAGIC) ||
+	if ((cfg->magic == CONFIG_FLASH_MAGIC) &&
 			(calc_checksum((uint32_t *)&cfg->config, sizeof(config_t)) == cfg->checksum))
 	{
 		memcpy(&global_config, &cfg->config, sizeof(config_t));
@@ -105,7 +105,14 @@ config_status_t persist_config(void)
 				}
 				if (status == CFG_SUCCESS)
 				{
-					if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)&cfg->checksum, checksum) != HAL_OK)
+					if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t)&cfg->checksum, checksum) == HAL_OK)
+					{
+						if ((cfg->magic != CONFIG_FLASH_MAGIC) || (cfg->checksum != checksum))
+						{
+							status = CFG_READ_ERROR;
+						}
+					}
+					else
 					{
 						status = CFG_WRITE_ERROR;
 					}
