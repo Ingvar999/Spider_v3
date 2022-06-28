@@ -801,7 +801,7 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 	
 	switch (task_ctx->task_stage){
 		case TASK_STAGE_1:
-		if ((direction != CMD_PARAM_OMITTED) || ((direction >= -180) && (direction <= 180)))
+		if ((direction == CMD_PARAM_OMITTED) || ((direction >= -180) && (direction <= 180)))
 		{
 			if (pos_mgr_is_leg_fixed())
 			{
@@ -947,7 +947,7 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 			{
 				pos_mgr_set_leg_position(leg_id, CMD_PARAM_OMITTED, pos_mgr_get_global_r(), 90);
 			}
-			task_ctx->task_stage = TASK_STAGE_6;
+			task_ctx->task_stage = TASK_STAGE_8;
 		break;
 		case TASK_STAGE_8: // Fall 3 legs
 		{

@@ -15,7 +15,7 @@
 #define BASIC_HEIGHT						(-3)
 #define BASIC_RADIUS						(20)
 #define LEG_LIFTING_HEIGHT			(20)
-#define LEG_FALLING_STEP				(3)
+#define LEG_FALLING_STEP				(4)
 #define MAX_TEMP_TURN_ANGLE			(22)
 #define MAX_TURN_ANGLE					(10)
 #define STEP_LENGTH							(25)
