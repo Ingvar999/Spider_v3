@@ -96,9 +96,33 @@ static inline int abs_int(int val)
 	return val < 0 ? -val : val;
 }
 
+bool cmd_mgr_is_idle(void)
+{
+	return (task_ctx->task_stage == TASK_STAGE_IDLE) && (uxQueueMessagesWaiting(task_queue) == 0);
+}
+
 void cmd_mgr_abort_command(bool all, bool force)
 {
-	abort_active_command = true;
+	if (task_ctx->task_stage != TASK_STAGE_IDLE)
+	{
+		if (force)
+		{
+			LOG_WARN("Task aborted: type - %d, id - %d", task_ctx->task_type, active_task_id);
+			protocol_send_response(active_task_id, EXT_COMMAND_ABORTED, 0);
+			task_ctx->task_stage = TASK_STAGE_IDLE;
+			allow_position_control(true);
+		}
+		else
+		{
+			abort_active_command = true;
+		}
+	}
+	
+	if (all)
+	{
+		pending_task_ctx_t task;
+		while (xQueueReceive(task_queue, (void *)&task, (TickType_t)0) == pdTRUE){}
+	}
 }
 
 cmd_mgr_status_t cmd_mgr_init(void)

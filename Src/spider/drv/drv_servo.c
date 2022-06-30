@@ -177,7 +177,8 @@ drv_servo_status_t drv_servo_init(void)
 {
 	drv_servo_status_t status;
 	
-	drv_servo_disable();
+	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
+	
 	status = pca9685_init(PCA_BOARD_BASE_ADDR);
 	if (status == DRV_SERVO_SUCCESS)
 	{
@@ -205,7 +206,9 @@ drv_servo_status_t drv_servo_enable(void)
 
 void drv_servo_disable(void)
 {
+	HAL_Delay(40);
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
+	HAL_Delay(40);
 }
 
 drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force)

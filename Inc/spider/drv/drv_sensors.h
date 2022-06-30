@@ -14,13 +14,17 @@
 
 #define VCC_CACHE_VALIDITY				(100)
 #define ADC_TO_VCC								(4.22)
+#define WORKLOAD_TO_VCC_ADC				(0.06)
 #define LOW_VCC										(1659)			// 7000 mV
 #define CRITICAL_VCC							(1564)			// 6600 mV
+#define CRITICAL_WORKLOAD					(6000)
+#define CRITICAL_LEG_WORKLOAD			(1500)
 
 #define MIN_LEG_WORKLOAD					(18)
 #define MIN_LEGS_ON_SURFACE				(2)
 
 void drv_sensors_init(void);
+void drv_sensors_deinit(void);
 
 int drv_sensors_get_vcc(void);
 bool drv_sensors_is_low_vcc(void);

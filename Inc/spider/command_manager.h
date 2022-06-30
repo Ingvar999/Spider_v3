@@ -49,3 +49,5 @@ cmd_mgr_status_t cmd_mgr_process(void);
 
 void cmd_mgr_abort_command(bool all, bool force);
 
+bool cmd_mgr_is_idle(void);
+

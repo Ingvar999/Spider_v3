@@ -23,14 +23,15 @@
 #include "drv_sensors.h"
 #include "services.h"
 #include "config.h"
-
+#include "event_handler.h"
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
 #define ESP_INPUT_QUEUE_SIZE			(3)
 
+osThreadId HeartBeatTaskHandle;
 /* Private variables ---------------------------------------------------------*/
-static osThreadId HeartBeatTaskHandle, InputHandlerTaskHandle, CommandManagerTaskHandle;
+static osThreadId InputHandlerTaskHandle, CommandManagerTaskHandle;
 static char cli_string[HOST_RX_BUF_SIZE];
 static char esp_input_buf[ESP_INPUT_QUEUE_SIZE][ESP_RX_BUF_SIZE];
 static buffer_queue_t esp_input_queue;
@@ -100,9 +101,9 @@ void post_init_handler(void)
 	osThreadDef(CommandManagerTask, StartCommandManagerTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE * 4);
   CommandManagerTaskHandle = osThreadCreate(osThread(CommandManagerTask), NULL);
 	
-	
-	drv_gyro_init(16);
 	drv_sensors_init();
+	drv_gyro_init(16);
+	
 	if (!drv_sensors_is_critical_vcc())
 	{
 		drv_servo_enable();
@@ -212,6 +213,12 @@ static void StartHeartBeatTask(void const * argument)
 		else
 		{
 			//LOG_DBG("Legs busy");
+		}
+		
+		if (is_idle && is_spider_in_psm() && cmd_mgr_is_idle())
+		{
+			drv_servo_disable();
+			osThreadSuspend(osThreadGetId());
 		}
 
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);

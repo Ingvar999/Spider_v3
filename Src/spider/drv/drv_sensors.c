@@ -65,6 +65,13 @@ void drv_sensors_init(void)
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&raw_adc, CHANNELS_NUMBER * SAMPLES_NUMBER);
 }
 
+void drv_sensors_deinit(void)
+{
+	HAL_ADC_Stop(&hadc1);
+	HAL_ADC_Stop_DMA(&hadc1);
+	memset((void *)processed_adc, 0, sizeof(processed_adc));
+}
+
 static uint16_t get_vcc_adc()
 {
 	static uint32_t next_conversion = 0;
@@ -82,6 +89,11 @@ static uint16_t get_vcc_adc()
 	return vcc_adc;
 }
 
+static uint16_t get_adjusted_vcc_adc()
+{
+	return get_vcc_adc() + (drv_sensors_get_whole_workload() * WORKLOAD_TO_VCC_ADC); // Compensate VCC levele fall due to workload current
+}
+
 int drv_sensors_get_vcc(void)
 {
 	return get_vcc_adc() * ADC_TO_VCC;
@@ -89,12 +101,12 @@ int drv_sensors_get_vcc(void)
 
 bool drv_sensors_is_low_vcc(void)
 {
-	return get_vcc_adc() < LOW_VCC;
+	return get_adjusted_vcc_adc() < LOW_VCC;
 }
 
 bool drv_sensors_is_critical_vcc(void)
 {
-	return get_vcc_adc() < CRITICAL_VCC;
+	return get_adjusted_vcc_adc() < CRITICAL_VCC;
 }
 
 bool drv_sensors_is_leg_on_surface(uint8_t leg_id)

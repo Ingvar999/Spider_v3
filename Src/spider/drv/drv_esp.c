@@ -12,6 +12,7 @@
 #include "defines.h"
 #include "protocol_handler.h"
 #include "buffer_queue.h"
+#include "event_handler.h"
 
 #define ESP_OK														"OK"
 #define ESP_ERR														"ERROR"
@@ -57,7 +58,7 @@ static void handle_disconnect(char connection)
 	if (active_connection == connection)
 	{
 		active_connection = INVALID_CONNECTION_ID;
-		// handle global event
+		handle_user_disconnect();
 	}
 	LOG_INFO("Disconnected %c", connection);
 }

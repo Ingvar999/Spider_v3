@@ -18,6 +18,7 @@
 #include "drv_gyro.h"
 #include "drv_sensors.h"
 #include "config.h"
+#include "event_handler.h"
 
 #define OUTPUT_BUFFER_SIZE				(128)
 #define RESP_HEADER_SIZE					(4)
@@ -33,53 +34,60 @@ static char *get_additional_info_buffer()
 static external_status_t process_action_request(char action, char request_id, int arg1, int arg2)
 {
 	external_status_t status = EXT_STATUS_OK;
-	pending_task_ctx_t task;
 	
-	switch (action) 
+	if (!is_spider_in_psm())
 	{
-		case 'b':
-			task.task_type = TASK_BASIC_POSITION;
-		break;
-		case 'h':
-			task.task_type = TASK_CHANGE_HEIGHT;
-		break;
-		case 'r':
-			task.task_type = TASK_SET_RADIUS;
-		break;
-		case 't':
-			task.task_type = TASK_TEMPORAL_TURN;
-		break;
-		case 'f':
-			task.task_type = TASK_FIXED_TURN;
-		break;
-		case '-':
-			task.task_type = TASK_SET_RADIUS_FIXED_LEG;
-		break;
-		case '|':
-			task.task_type = TASK_CHANGE_HEIGHT_FIXED_LEG;
-		break;
-		case ')':
-			task.task_type = TASK_TURN_FIXED_LEG;
-		break;
-		case '+':
-			task.task_type = TASK_RETURN_FIXED_LEG;
-		break;
-		case 'w':
-			task.task_type = TASK_WALK;
-		break;
-		default:
-			status = EXT_UNSUPPORTED_ACTION;
-	}
-	
-	if (status == EXT_STATUS_OK)
-	{
-		task.arg_1 = arg1;
-		task.arg_2 = arg2;
-		task.task_id = request_id;
-		if (cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS)
+		pending_task_ctx_t task;
+		switch (action) 
 		{
-			status = EXT_QUEUE_IS_FULL;
+			case 'b':
+				task.task_type = TASK_BASIC_POSITION;
+			break;
+			case 'h':
+				task.task_type = TASK_CHANGE_HEIGHT;
+			break;
+			case 'r':
+				task.task_type = TASK_SET_RADIUS;
+			break;
+			case 't':
+				task.task_type = TASK_TEMPORAL_TURN;
+			break;
+			case 'f':
+				task.task_type = TASK_FIXED_TURN;
+			break;
+			case '-':
+				task.task_type = TASK_SET_RADIUS_FIXED_LEG;
+			break;
+			case '|':
+				task.task_type = TASK_CHANGE_HEIGHT_FIXED_LEG;
+			break;
+			case ')':
+				task.task_type = TASK_TURN_FIXED_LEG;
+			break;
+			case '+':
+				task.task_type = TASK_RETURN_FIXED_LEG;
+			break;
+			case 'w':
+				task.task_type = TASK_WALK;
+			break;
+			default:
+				status = EXT_UNSUPPORTED_ACTION;
 		}
+		
+		if (status == EXT_STATUS_OK)
+		{
+			task.arg_1 = arg1;
+			task.arg_2 = arg2;
+			task.task_id = request_id;
+			if (cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS)
+			{
+				status = EXT_QUEUE_IS_FULL;
+			}
+		}
+	}
+	else
+	{
+		status = EXT_SPIDER_IN_PSM;
 	}
 	
 	return status;
@@ -150,7 +158,18 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
       }
 		break;
 		case 'z':
-			cmd_mgr_abort_command(false, false);
+			if ((arg1 == CMD_PARAM_OMITTED) || (arg1 == 0))
+			{
+				cmd_mgr_abort_command(false, false);
+			}
+			else if (arg1 == 1)
+			{
+				cmd_mgr_abort_command(true, false);
+			}
+			else
+			{
+				status = EXT_INVALID_PARAMETERS;
+			}
 		break;
 		case 't':
 			if (reset_config() != CFG_SUCCESS)
@@ -168,6 +187,31 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 			if (restore_config() != CFG_SUCCESS)
 			{
 				status = EXT_GENERIC_ERROR;
+			}
+		break;
+		case 'i':
+			if (arg1 == CMD_PARAM_OMITTED)
+			{
+				if (is_spider_in_psm())
+				{
+					handle_exit_psm();
+				}
+				else
+				{
+					handle_enter_psm(false);
+				}
+			}
+			else if (arg1 == 0)
+			{
+				handle_enter_psm(true);
+			}
+			else if (arg1 == 1)
+			{
+				handle_exit_psm();
+			}
+			else
+			{
+				status = EXT_INVALID_PARAMETERS;
 			}
 		break;
 		default:
@@ -221,7 +265,7 @@ static external_status_t process_info_request(const char *property_list, int pro
 				PUSH_INFO("%d", drv_sensors_get_vcc());
 			break;
 			case 'i':
-				PUSH_INFO("%d%d", global_config.gyro_control_enable, global_config.workload_alignment_enable);
+				PUSH_INFO("%d%d%d", global_config.gyro_control_enable, global_config.workload_alignment_enable, is_spider_in_psm());
 			break;
 			case 'q':
 				PUSH_INFO("%d %d", global_config.position_v, global_config.position_h);
@@ -246,7 +290,7 @@ void protocol_handle(const char *input)
 	int additional_info_len = 0;
 	external_status_t status = EXT_GENERIC_ERROR;
   char request_type = REQUEST_TYPE_NONE;
-  char request_id = '0';
+  char request_id = REQUEST_ID_DEFAULT;
 	uint32_t msg_len = strlen(input);
 	
 	ASSERT_IF(ASSERT_CODE_0F, input == NULL);
@@ -302,7 +346,7 @@ void protocol_handle(const char *input)
     }
     else 
 		{
-      request_id = '0';
+      request_id = REQUEST_ID_DEFAULT;
       status = EXT_BAD_REQUEST;
     }
   }
@@ -322,18 +366,21 @@ void protocol_send_response(char response_id, external_status_t status, int addi
 	}
 	else
 	{
-		output_string[0] = response_id;
-		output_string[1] = '0' + (status >> 8);
-		output_string[2] = '0' + (status & 0xFF);
-		output_string[3] = '\n';
-		
-		if ((response_id >= '5') && (response_id <= '9'))
+		if (response_id != REQUEST_ID_INTERNAL)
 		{
-			drv_uart_transfer(UART_ID_HOST, (uint8_t*)output_string, RESP_HEADER_SIZE + additional_info_len);
-		}
-		else
-		{
-			drv_esp_send(output_string, RESP_HEADER_SIZE + additional_info_len);
+			output_string[0] = response_id;
+			output_string[1] = '0' + (status / 10);
+			output_string[2] = '0' + (status % 10);
+			output_string[3] = '\n';
+			
+			if ((response_id >= '5') && (response_id <= '9'))
+			{
+				drv_uart_transfer(UART_ID_HOST, (uint8_t*)output_string, RESP_HEADER_SIZE + additional_info_len);
+			}
+			else
+			{
+				drv_esp_send(output_string, RESP_HEADER_SIZE + additional_info_len);
+			}
 		}
 	}
 }

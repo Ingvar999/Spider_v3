@@ -13,6 +13,8 @@
 #include "drv_gyro.h"
 #include "position_manager.h"
 #include "config.h"
+#include "event_handler.h"
+#include "protocol_handler.h"
 
 static bool position_control_allowed = false;
 
@@ -25,22 +27,49 @@ static void vcc_control(uint32_t tick)
 {
 	static uint32_t next_notification = 0;
 	
-	if (drv_sensors_is_critical_vcc())
+	if (drv_sensors_is_critical_vcc() && !is_spider_in_psm())
 	{
-		TODO("Enter PSM");
+		LOG_ERR("Critical Vcc");
+		handle_enter_psm(true);
+		protocol_send_response(REQUEST_ID_ASYNC_EVENT, EXT_CRITICAL_VCC, 0);
+	}
+	else if ((tick >= next_notification) && drv_sensors_is_low_vcc())
+	{
+		LOG_WARN("Low Vcc");
+		protocol_send_response(REQUEST_ID_ASYNC_EVENT, EXT_LOW_VCC, 0);
+		next_notification = tick + VCC_NOTIFICATION_TIMEOUT;
+	}
+}
+
+static void workload_control(void)
+{
+	bool critical_workload = false;
+	uint32_t whole_workload = drv_sensors_get_whole_workload(); 
+	
+	if (whole_workload > CRITICAL_WORKLOAD)
+	{
+		LOG_ERR("Critical workload: %d", whole_workload);
+		critical_workload = true;
+	}
+	else
+	{
+		uint16_t workload[LEGS_COUNT];
+		drv_sensors_get_legs_workload(workload);
+		for (int i = 0; i < LEGS_COUNT; ++i)
+		{
+			if (workload[i] > CRITICAL_LEG_WORKLOAD)
+			{
+				LOG_ERR("Critical Leg workload: %d", workload[i]);
+				critical_workload = true;
+				break;
+			}
+		}
 	}
 	
-	if ((tick >= next_notification) && (drv_sensors_is_critical_vcc() || drv_sensors_is_low_vcc()))
+	if (critical_workload)
 	{
-		if (drv_sensors_is_critical_vcc())
-		{
-			LOG_ERR("Critical Vcc");
-		}
-		else
-		{
-			LOG_WARN("Low Vcc");
-		}
-		next_notification = tick + VCC_NOTIFICATION_TIMEOUT;
+		handle_enter_psm(true);
+		protocol_send_response(REQUEST_ID_ASYNC_EVENT, EXT_CRITICAL_WORKLOAD, 0);
 	}
 }
 
@@ -165,13 +194,17 @@ void process_services(bool *is_idle)
 		next_led_change = tick + LED_SWITCH_TIMEOUT;
 	}
 	
+	workload_control();
 	vcc_control(tick);
 	
-	if (tick >= next_gyro_update) 
+	if (!is_spider_in_psm())
 	{
-		drv_gyro_update(GYRO_UPDATE_TIMEOUT);
-		next_gyro_update = tick + GYRO_UPDATE_TIMEOUT;
+		if (tick >= next_gyro_update) 
+		{
+			drv_gyro_update(GYRO_UPDATE_TIMEOUT);
+			next_gyro_update = tick + GYRO_UPDATE_TIMEOUT;
+		}
+		
+		position_control(tick, is_idle);
 	}
-	
-	position_control(tick, is_idle);
 }
