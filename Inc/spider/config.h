@@ -10,6 +10,8 @@
 
 #include "defines.h"
 
+#define HOME_AP_STRING_LEN					(32)
+
 #define CONFIG_FLASH_ADDR						(0x0800C000)
 #define CONFIG_FLASH_SECTOR					FLASH_SECTOR_3
 #define CONFIG_FLASH_MAGIC					(0xFAAC8CE1)
@@ -28,6 +30,9 @@ typedef struct {
 	int position_h;
 	bool workload_alignment_enable;
 	bool gyro_control_enable;
+	bool use_home_ap;
+	char home_ap_name[HOME_AP_STRING_LEN];
+	char home_ap_password[HOME_AP_STRING_LEN];
 } config_t;
 
 extern config_t global_config;

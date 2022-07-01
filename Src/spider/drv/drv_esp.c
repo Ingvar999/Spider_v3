@@ -13,9 +13,11 @@
 #include "protocol_handler.h"
 #include "buffer_queue.h"
 #include "event_handler.h"
+#include "config.h"
 
 #define ESP_OK														"OK"
 #define ESP_ERR														"ERROR"
+#define ESP_FAIL													"FAIL"
 #define INVALID_CONNECTION_ID							'$'
 
 #define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r\n"), sizeof(cmd) + 1)
@@ -28,11 +30,15 @@
 typedef enum 
 {
 	ESP_RESET = 0,
-	ESP_INIT_1,
-	ESP_INIT_2,
-	ESP_INIT_3,
-	ESP_INIT_4,
-	ESP_INIT_5,
+	ESP_COMMON_INIT_1,
+	ESP_COMMON_INIT_2,
+	ESP_COMMON_INIT_3,
+	ESP_COMMON_INIT_4,
+	ESP_AP_INIT_1,
+	ESP_AP_INIT_2,
+	ESP_HOME_AP_INIT_1,
+	ESP_HOME_AP_INIT_2,
+	ESP_HOME_AP_INIT_3,
 	ESP_READY,
 	ESP_DISCONNECT,
 	ESP_SEND_1,
@@ -49,7 +55,7 @@ static char esp_cmd_buf[ESP_CMD_BUF_SIZE];
 void drv_esp_init(void)
 {
 	SEND_ESP_COMMAND("AT");
-	esp_state = ESP_INIT_1;
+	esp_state = ESP_COMMON_INIT_1;
 	bufq_init(&esp_tx_queue, esp_tx_data_buf, ESP_TX_DATA_BUF_SIZE, ESP_TX_DATA_BUF_QUEUE_SIZE);
 }
 
@@ -146,7 +152,8 @@ void drv_esp_handle_input(const char *input)
 	if (input[0] != '\r')
 	{
 		bool is_ok = str_starts_with(input, ESP_OK);
-		bool is_err = str_starts_with(input, ESP_ERR);
+		bool is_err = str_starts_with(input, ESP_ERR) || str_starts_with(input, ESP_FAIL);
+		bool exit;
 		
 		if (is_err)
 		{
@@ -157,94 +164,132 @@ void drv_esp_handle_input(const char *input)
 			LOG_DBG("ESP: %s", input);
 		}
 		
-		switch (esp_state)
-		{
-			case ESP_RESET:
-				// igore all messages
-			break;
-			case ESP_INIT_1:
-				// wait for AT->OK in case of soft reset and "ready" if PowerOn
-				if (is_ok || str_starts_with(input, "ready"))
-				{
-					SEND_ESP_COMMAND("ATE0");
-					esp_state = ESP_INIT_2;
-				}
-			break;
-			case ESP_INIT_2:
-				if (is_ok)
-				{
-					SEND_ESP_COMMAND("AT+CIPMUX=1");
-					esp_state = ESP_INIT_3;
-				}
-			break;
-			case ESP_INIT_3:
-				if (is_ok)
-				{
-					SEND_ESP_COMMAND("AT+CIPSERVER=1,80");
-					esp_state = ESP_INIT_4;
-				}
-			break;
-			case ESP_INIT_4:
-				if (is_ok)
-				{
-					SEND_ESP_COMMAND("AT+CIPSTO=300");
-					esp_state = ESP_INIT_5;
-				}
-			break;
-			case ESP_INIT_5:
-				if (is_ok)
-				{
-					esp_state = ESP_READY;
-				}
-			break;
-			case ESP_READY:
-				handle_event(input);
-			break;
-			case ESP_DISCONNECT:
-				if (str_starts_with(input + 2, "CLOSED"))
-				{
-					handle_disconnect(input[0]);
-				}
-				else if (is_ok)
-				{
-					esp_state = ESP_READY;
-				}
-				else
-				{
-					LOG_WARN("Expected esp connection to close, got: %s");
-				}
-			break;
-			case ESP_SEND_1:
-				if (is_ok)
-				{
-					uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
-					drv_uart_transfer(UART_ID_ESP, esp_buf + sizeof(int), *((int*) esp_buf));
-					esp_state = ESP_SEND_2;
-				}
-				else if (str_starts_with(input, "busy"))
-				{
-					esp_state = ESP_SEND_BUSY;
-				}
-			case ESP_SEND_2:
-				if (str_starts_with(input, "Recv"))
-				{
-					bufq_free_buffer(&esp_tx_queue, false);
-				}
-				else if (str_starts_with(input, "SEND OK"))
-				{
-					esp_state = ESP_READY;
-				}
-				else if (str_starts_with(input, "busy"))
-				{
-					esp_state = ESP_SEND_BUSY;
-				}
-			break;
-			case ESP_SEND_BUSY:
-				LOG_ERR("Esp BUSY");
-			break;
-			default:
-				ASSERT(ASSERT_CODE_0E);
-		}
+		do {
+			exit = true;
+			switch (esp_state)
+			{
+				case ESP_RESET:
+					// igore all messages
+				break;
+				case ESP_COMMON_INIT_1:
+					// wait for AT->OK in case of soft reset and "ready" if PowerOn
+					if (is_ok || str_starts_with(input, "ready"))
+					{
+						SEND_ESP_COMMAND("ATE0");
+						esp_state = ESP_COMMON_INIT_2;
+					}
+				break;
+				case ESP_COMMON_INIT_2:
+					if (is_ok)
+					{
+						SEND_ESP_COMMAND("AT+CIPMUX=1");
+						esp_state = ESP_COMMON_INIT_3;
+					}
+				break;
+				case ESP_COMMON_INIT_3:
+					if (is_ok)
+					{
+						SEND_ESP_COMMAND("AT+CIPSERVER=1,80");
+						esp_state = ESP_COMMON_INIT_4;
+					}
+				break;
+				case ESP_COMMON_INIT_4:
+					if (is_ok)
+					{
+						SEND_ESP_COMMAND("AT+CIPSTO=600"); // Idle connection timeout 10 min
+						esp_state = global_config.use_home_ap ? ESP_HOME_AP_INIT_1 : ESP_AP_INIT_1;
+					}
+				break;
+				case ESP_AP_INIT_1:
+					if (is_ok)
+					{
+						SEND_ESP_COMMAND("AT+CWMODE_CUR=2");
+						esp_state = ESP_AP_INIT_2;
+					}
+				break;
+				case ESP_AP_INIT_2:
+					if (is_ok)
+					{
+						esp_state = ESP_READY;
+					}
+				break;
+				case ESP_HOME_AP_INIT_1:
+					if (is_ok)
+					{
+						SEND_ESP_COMMAND("AT+CWMODE_CUR=1");
+						esp_state = ESP_HOME_AP_INIT_2;
+					}
+				break;
+				case ESP_HOME_AP_INIT_2:
+					if (is_ok)
+					{
+						drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CWJAP=\"%s\",\"%s\"\r\n", global_config.home_ap_name, global_config.home_ap_password));
+						esp_state = ESP_HOME_AP_INIT_3;
+					}	
+				break;
+				case ESP_HOME_AP_INIT_3:
+					if (is_ok)
+					{
+						esp_state = ESP_READY;
+					}
+					else if (is_err)
+					{
+						LOG_ERR("Unable to connect Home AP: %s", global_config.home_ap_name);
+						esp_state = ESP_AP_INIT_1;
+						exit = false;
+						is_ok = true;
+						is_err = false;
+					}
+				break;
+				case ESP_READY:
+					handle_event(input);
+				break;
+				case ESP_DISCONNECT:
+					if (str_starts_with(input + 2, "CLOSED"))
+					{
+						handle_disconnect(input[0]);
+					}
+					else if (is_ok)
+					{
+						esp_state = ESP_READY;
+					}
+					else
+					{
+						LOG_WARN("Expected esp connection to close, got: %s");
+					}
+				break;
+				case ESP_SEND_1:
+					if (is_ok)
+					{
+						uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
+						drv_uart_transfer(UART_ID_ESP, esp_buf + sizeof(int), *((int*) esp_buf));
+						esp_state = ESP_SEND_2;
+					}
+					else if (str_starts_with(input, "busy"))
+					{
+						esp_state = ESP_SEND_BUSY;
+					}
+				case ESP_SEND_2:
+					if (str_starts_with(input, "Recv"))
+					{
+						bufq_free_buffer(&esp_tx_queue, false);
+					}
+					else if (str_starts_with(input, "SEND OK"))
+					{
+						esp_state = ESP_READY;
+					}
+					else if (str_starts_with(input, "busy"))
+					{
+						esp_state = ESP_SEND_BUSY;
+					}
+				break;
+				case ESP_SEND_BUSY:
+					LOG_ERR("Esp BUSY");
+				break;
+				default:
+					ASSERT(ASSERT_CODE_0E);
+			}
+		}while (!exit);
 		
 		uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
 		if ((esp_buf != NULL) && (esp_state == ESP_READY))

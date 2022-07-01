@@ -23,6 +23,9 @@ static const config_t default_config = {
 	0, // position horizontal
 	true, // workload alignment enable
 	true, // gyro control enable
+	true, // use home AP
+	"opa", // home AP name
+	"helloworld", // home AP password
 };
 
 static void set_default_config()
