@@ -31,22 +31,19 @@ void handle_user_disconnect(void)
 		task.arg_1 = 0;
 		task.arg_2 = 0;
 		task.task_id = REQUEST_ID_INTERNAL;
-		task.task_id = TASK_BASIC_POSITION;
+		task.task_type = TASK_BASIC_POSITION;
 		ASSERT_IF(ASSERT_CODE_1A, cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS);
 	}
 }
 
 void handle_enter_psm(bool force)
 {
-	if (!is_spider_in_psm())
+	if (!is_spider_in_psm() || force)
 	{
-		LOG_INFO("Enter PSM!");
 		if (force)
 		{
-			drv_servo_disable();
-			osThreadSuspend(HeartBeatTaskHandle);
+			handle_post_enter_psm();
 			cmd_mgr_abort_command(true, true);
-			pos_mgr_set_init_state();
 		}
 		else
 		{
@@ -56,29 +53,37 @@ void handle_enter_psm(bool force)
 			task.arg_1 = 0;
 			task.arg_2 = 0;
 			task.task_id = REQUEST_ID_INTERNAL;
-			task.task_id = TASK_BASIC_POSITION;
+			task.task_type = TASK_BASIC_POSITION;
 			ASSERT_IF(ASSERT_CODE_1B, cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS);
 		}	
 		
 		drv_sensors_deinit();
-		LED_OFF(GREEN);
 		
 		is_in_psm = true;
+		LOG_INFO("Enter PSM Done!");
 	}
+}
+
+void handle_post_enter_psm(void)
+{
+	drv_servo_disable();
+	osThreadSuspend(HeartBeatTaskHandle);
+	LED_OFF(GREEN);
 }
 
 void handle_exit_psm(void)
 {
 	if (is_spider_in_psm())
 	{
-		LOG_INFO("Exit PSM");
 		osThreadResume(HeartBeatTaskHandle);
 		drv_gyro_init(1);
 		drv_sensors_init();
 		
 		drv_servo_enable();
+		pos_mgr_set_init_state();
 		
 		is_in_psm = false;
+		LOG_INFO("Exit PSM Done");
 	}
 }
 

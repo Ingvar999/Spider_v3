@@ -217,8 +217,7 @@ static void StartHeartBeatTask(void const * argument)
 		
 		if (is_idle && is_spider_in_psm() && cmd_mgr_is_idle())
 		{
-			drv_servo_disable();
-			osThreadSuspend(osThreadGetId());
+			handle_post_enter_psm();
 		}
 
 		osDelayUntil(&last_wake_time, HEART_BEAT_DELAY);

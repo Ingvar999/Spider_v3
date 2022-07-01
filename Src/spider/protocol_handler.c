@@ -194,7 +194,14 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 			{
 				if (is_spider_in_psm())
 				{
-					handle_exit_psm();
+					if (!drv_sensors_is_critical_vcc())
+					{
+						handle_exit_psm();
+					}
+					else
+					{
+						status = EXT_CRITICAL_VCC;
+					}
 				}
 				else
 				{
@@ -207,7 +214,14 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 			}
 			else if (arg1 == 1)
 			{
-				handle_exit_psm();
+				if (!drv_sensors_is_critical_vcc())
+				{
+					handle_exit_psm();
+				}
+				else
+				{
+					status = EXT_CRITICAL_VCC;
+				}
 			}
 			else
 			{

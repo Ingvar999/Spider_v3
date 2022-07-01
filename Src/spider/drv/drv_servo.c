@@ -50,6 +50,7 @@ typedef enum
  */
 typedef enum
 {
+	PCA9685_REGISTER_ALLCALL = 1,
 	PCA9685_REGISTER_MODE1_SLEEP = (1u << 4u),
 	PCA9685_REGISTER_MODE1_AI = (1u << 5u),
 	PCA9685_REGISTER_MODE1_RESTART = (1u << 7u)
@@ -142,6 +143,29 @@ static drv_servo_status_t pca9685_init(uint8_t address)
 	return status;
 }
 
+static drv_servo_status_t pca9685_deinit(uint8_t address)
+{
+	drv_servo_status_t status;
+	uint8_t mode = PCA9685_REGISTER_MODE1_SLEEP;
+	uint8_t outputBuffer[5] = {PCA9685_REGISTER_ALL_LED_ON_L, 0, 0, 0xFF, 0xFF};
+	
+	if (HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, PCA_I2C_TIMEOT) == HAL_OK)
+	{
+		HAL_Delay(5);
+		status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, mode);
+	}
+	else
+	{
+		status = DRV_SERVO_HW_ACCESS_ERROR;
+	}
+	
+	if (status != DRV_SERVO_SUCCESS)
+	{
+		LOG_ERR("Deinit Servo failed: addr - %X", address);
+	}
+	return status;
+}
+
 static drv_servo_status_t pca9685_pwm(uint8_t address, uint8_t num, uint16_t on, uint16_t off)
 {
   uint8_t outputBuffer[5] = {0x06 + 4*num, on, (on >> 8), off, (off >> 8)};
@@ -193,22 +217,28 @@ drv_servo_status_t drv_servo_init(void)
 
 drv_servo_status_t drv_servo_enable(void)
 {
-	if (is_initialized)
+	drv_servo_status_t status = DRV_SERVO_SUCCESS;
+	
+	if (!is_initialized)
+	{
+		status = drv_servo_init();
+	}
+	
+	if (status == DRV_SERVO_SUCCESS)
 	{
 		HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_RESET);
-		return DRV_SERVO_SUCCESS;
 	}
-	else
-	{
-		return DRV_SERVO_NOT_INITIALIZED;
-	}
+
+	return status;
 }
 
 void drv_servo_disable(void)
-{
-	HAL_Delay(40);
+{	
+	pca9685_deinit(PCA_BOARD_BASE_ADDR);
+	pca9685_deinit(PCA_BOARD_BASE_ADDR + 1);
+	is_initialized = false;
+	
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
-	HAL_Delay(40);
 }
 
 drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force)

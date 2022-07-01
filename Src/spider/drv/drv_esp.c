@@ -118,7 +118,7 @@ void drv_esp_send(const char *data, int data_len)
 		uint8_t *esp_buf;
 		if (active_connection == INVALID_CONNECTION_ID)
 		{
-			LOG_WARN("No active connection to send");
+			LOG_WARN("No active connection to send response");
 		}
 		else if ((esp_buf = bufq_get_write_buffer(&esp_tx_queue, false)) == NULL)
 		{

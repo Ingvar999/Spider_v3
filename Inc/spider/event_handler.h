@@ -13,5 +13,6 @@
 void handle_user_disconnect(void);
 
 void handle_enter_psm(bool force);
+void handle_post_enter_psm(void);
 void handle_exit_psm(void);
 bool is_spider_in_psm(void);
