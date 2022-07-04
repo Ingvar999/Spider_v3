@@ -21,9 +21,9 @@
 #define INVALID_CONNECTION_ID							'$'
 
 #define SEND_ESP_COMMAND(cmd)							drv_uart_transfer(UART_ID_ESP, (const uint8_t*)(cmd "\r\n"), sizeof(cmd) + 1)
-#define SEND_ESP_TRANSFER_REQ(conn, len)	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPSEND=%c,%d\r\n", conn, len))
+#define SEND_ESP_ARG_COMMAND(cmd, ...)		drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, snprintf(esp_cmd_buf, ESP_CMD_BUF_SIZE, cmd "\r\n", __VA_ARGS__))
 
-#define ESP_CMD_BUF_SIZE									(28)
+#define ESP_CMD_BUF_SIZE									(80)
 #define ESP_TX_DATA_BUF_QUEUE_SIZE				(2)
 #define ESP_TX_DATA_BUF_SIZE							(128)
 
@@ -72,7 +72,7 @@ static void handle_disconnect(char connection)
 static void disconnect(char connection)
 {
 	LOG_INFO("Disconnect %c...", connection);
-	drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CIPCLOSE=%c\r\n", connection));
+	SEND_ESP_ARG_COMMAND("AT+CIPCLOSE=%c", connection);
 	esp_state = ESP_DISCONNECT;
 }
 
@@ -134,7 +134,7 @@ void drv_esp_send(const char *data, int data_len)
 		{
 			if (esp_state == ESP_READY)
 			{
-				SEND_ESP_TRANSFER_REQ(active_connection, data_len);
+				SEND_ESP_ARG_COMMAND("AT+CIPSEND=%c,%d", active_connection, data_len);
 				esp_state = ESP_SEND_1;
 			}
 			else
@@ -210,6 +210,7 @@ void drv_esp_handle_input(const char *input)
 				case ESP_AP_INIT_2:
 					if (is_ok)
 					{
+						LOG_INFO("AP activated");
 						esp_state = ESP_READY;
 					}
 				break;
@@ -223,13 +224,15 @@ void drv_esp_handle_input(const char *input)
 				case ESP_HOME_AP_INIT_2:
 					if (is_ok)
 					{
-						drv_uart_transfer(UART_ID_ESP, (const uint8_t*)esp_cmd_buf, sprintf(esp_cmd_buf, "AT+CWJAP=\"%s\",\"%s\"\r\n", global_config.home_ap_name, global_config.home_ap_password));
+						SEND_ESP_ARG_COMMAND("AT+CWJAP=\"%s\",\"%s\"", global_config.home_ap_name, global_config.home_ap_password);
 						esp_state = ESP_HOME_AP_INIT_3;
 					}	
 				break;
 				case ESP_HOME_AP_INIT_3:
 					if (is_ok)
 					{
+						
+						LOG_INFO("Home AP '%s' connected", global_config.home_ap_name);
 						esp_state = ESP_READY;
 					}
 					else if (is_err)
@@ -294,7 +297,7 @@ void drv_esp_handle_input(const char *input)
 		uint8_t *esp_buf = bufq_get_read_buffer(&esp_tx_queue, false);
 		if ((esp_buf != NULL) && (esp_state == ESP_READY))
 		{
-			SEND_ESP_TRANSFER_REQ(active_connection, *((int*) esp_buf));
+			SEND_ESP_ARG_COMMAND("AT+CIPSEND=%c,%d", active_connection, *((int*) esp_buf));
 			esp_state = ESP_SEND_1;
 		}
 	}
