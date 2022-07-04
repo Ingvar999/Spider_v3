@@ -9,6 +9,8 @@
 #include "drv_uart.h"
 #include "stm32f4xx_hal.h"
 
+#define BACKSPACE						(0x8)
+
 extern UART_HandleTypeDef UART_PORT_HOST;
 extern UART_HandleTypeDef UART_PORT_ESP;
 
@@ -44,13 +46,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	uart_port_id_t uart_port = get_uart_port_id(huart);
 	
-	if (uart_port < UART_ID_LAST){
+	if (uart_port < UART_ID_LAST)
+	{
 		if (ch == uart_config[uart_port].terminator){
 			rx_buf[uart_port][uart_config[uart_port].rx_pos] = 0;
 			uart_config[uart_port].input_handler((char *)rx_buf[uart_port], uart_config[uart_port].rx_pos + 1);
 			uart_config[uart_port].rx_pos = 0;
 		}	
-		else{
+		else if (ch == BACKSPACE)
+		{
+			if (uart_config[uart_port].rx_pos)
+			{
+				--uart_config[uart_port].rx_pos;
+			}
+		}
+		else
+		{
 			if (uart_config[uart_port].rx_pos < (RX_BUF_SIZE - 1)){
 				rx_buf[uart_port][uart_config[uart_port].rx_pos++] = ch;
 			}

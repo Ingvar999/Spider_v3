@@ -21,6 +21,7 @@ static const config_t default_config = {
 	3, // speed
 	0, // position vertical
 	0, // position horizontal
+	20, // leg lifting height
 	true, // workload alignment enable
 	true, // gyro control enable
 	true, // use home AP

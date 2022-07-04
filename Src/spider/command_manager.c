@@ -16,10 +16,11 @@
 #include "drv_sensors.h"
 #include "drv_servo.h"
 #include "services.h"
+#include "config.h"
 
 #pragma anon_unions
 
-#define CMD_QUEUE_SIZE						(4)
+#define CMD_QUEUE_SIZE						(3)
 #define MAX_TASK_NESTING					(3)
 
 typedef enum {
@@ -32,6 +33,11 @@ typedef enum {
 	TASK_STAGE_6,
 	TASK_STAGE_7,
 	TASK_STAGE_8,
+	TASK_STAGE_9,
+	TASK_STAGE_10,
+	TASK_STAGE_11,
+	TASK_STAGE_12,
+	TASK_STAGE_13,
 } task_stage_t;
 
 typedef struct {
@@ -46,12 +52,14 @@ typedef struct {
 			uint16_t legs_group;
 		} set_radius;
 		struct {
+			uint32_t rest_end;
 			uint16_t turn_angle;
 			uint16_t iterations_count;
 			uint16_t legs_group;
 			uint16_t new_r;
 		} fixed_turn;
 		struct {
+			uint32_t rest_end;
 			int direction;
 			bool wandering;
 			uint16_t legs_group;
@@ -202,7 +210,8 @@ cmd_mgr_status_t cmd_mgr_process(void)
 	
 	if (task_executed)
 	{
-		if (status != CMD_MGR_SUCCESS){
+		if (status != CMD_MGR_SUCCESS)
+		{
 		  task_ctx->task_stage = TASK_STAGE_IDLE;
 		}
 		if (task_ctx->task_stage == TASK_STAGE_IDLE) // task execution finished
@@ -342,7 +351,7 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 						pos_mgr_status_t sub_status = POS_MGR_SUCCESS;
 						for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && sub_status == POS_MGR_SUCCESS; ++leg_id)
 						{
-							sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - LEG_LIFTING_HEIGHT, pos_mgr_get_leg_r(leg_id));
+							sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - global_config.leg_lifting_height, pos_mgr_get_leg_r(leg_id));
 						}
 						if (sub_status == POS_MGR_SUCCESS)
 						{
@@ -353,7 +362,7 @@ static cmd_mgr_status_t set_radius_handler(int radius, int arg_2)
 							++task_ctx;
 							task_ctx->task_type = TASK_CHANGE_HEIGHT;
 							task_ctx->task_stage = TASK_STAGE_1;
-							status = change_height_handler(LEG_LIFTING_HEIGHT - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
+							status = change_height_handler(global_config.leg_lifting_height - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
 							bool done = task_ctx->task_stage == TASK_STAGE_IDLE;
 							--task_ctx;
 							
@@ -529,7 +538,7 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2)
 				pos_mgr_status_t sub_status = POS_MGR_SUCCESS;
 				for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && sub_status == POS_MGR_SUCCESS; ++leg_id)
 				{
-					sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - LEG_LIFTING_HEIGHT, pos_mgr_get_leg_r(leg_id));
+					sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - global_config.leg_lifting_height, pos_mgr_get_leg_r(leg_id));
 				}
 				if (drv_sensors_is_spider_on_surface() && (sub_status == POS_MGR_SUCCESS))
 				{
@@ -540,7 +549,7 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2)
 					++task_ctx;
 					task_ctx->task_type = TASK_CHANGE_HEIGHT;
 					task_ctx->task_stage = TASK_STAGE_1;
-					status = change_height_handler(LEG_LIFTING_HEIGHT - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
+					status = change_height_handler(global_config.leg_lifting_height - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
 					bool done = task_ctx->task_stage == TASK_STAGE_IDLE;
 					--task_ctx;
 							
@@ -640,18 +649,28 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2)
 			}
 		}
 		break;
-		case TASK_STAGE_6: // Lift 3 legs
+		case TASK_STAGE_6: // start resting to stabilyze
+			task_ctx->fixed_turn.rest_end = HAL_GetTick() + REST_BETWEEN_STEPS;
+			task_ctx->task_stage = TASK_STAGE_7;
+		break;
+		case TASK_STAGE_7: // wait rest end
+			if (task_ctx->fixed_turn.rest_end < HAL_GetTick())
+			{
+				task_ctx->task_stage = TASK_STAGE_8;
+			}			
+		break;
+		case TASK_STAGE_8: // Lift 3 legs
 			drv_servo_set_accel_mode(FADING_SPEED);
 			if (pos_mgr_lift_three_legs(task_ctx->fixed_turn.legs_group) == POS_MGR_SUCCESS)
 			{
-				task_ctx->task_stage = TASK_STAGE_7;
+				task_ctx->task_stage = TASK_STAGE_9;
 			}
 			else
 			{
 				status = CMD_MGR_INVALID_POSITION;
 			}
 		break;
-		case TASK_STAGE_7: // Turn all legs to default position
+		case TASK_STAGE_9: // Turn all legs to default position
 			drv_servo_set_accel_mode(NO_ACCELERATION);
 			for (int i = 0; i < LEGS_COUNT; ++i)
 			{
@@ -660,14 +679,14 @@ static cmd_mgr_status_t fixed_turn_handler(int angle, int arg_2)
 			
 			if (abort_active_command || (task_ctx->fixed_turn.iterations_count == 0))
 			{
-				task_ctx->task_stage = TASK_STAGE_8;
+				task_ctx->task_stage = TASK_STAGE_10;
 			}
 			else 
 			{
 				task_ctx->task_stage = TASK_STAGE_4;
 			}
 		break;
-		case TASK_STAGE_8: // Fall lifted legs and finish
+		case TASK_STAGE_10: // Fall lifted legs and finish
 		{
 			bool done;
 			if (pos_mgr_fall_three_legs(task_ctx->fixed_turn.legs_group, &done) == POS_MGR_SUCCESS)
@@ -836,7 +855,7 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 				pos_mgr_status_t sub_status = POS_MGR_SUCCESS;
 				for (uint8_t leg_id = 0; leg_id < LEGS_COUNT && sub_status == POS_MGR_SUCCESS; ++leg_id)
 				{
-					sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - LEG_LIFTING_HEIGHT, pos_mgr_get_leg_r(leg_id));
+					sub_status = pos_mgr_check_leg_position(pos_mgr_get_leg_h(leg_id) - global_config.leg_lifting_height, pos_mgr_get_leg_r(leg_id));
 				}
 				if (drv_sensors_is_spider_on_surface() && (sub_status == POS_MGR_SUCCESS))
 				{
@@ -847,7 +866,7 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 					++task_ctx;
 					task_ctx->task_type = TASK_CHANGE_HEIGHT;
 					task_ctx->task_stage = TASK_STAGE_1;
-					status = change_height_handler(LEG_LIFTING_HEIGHT - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
+					status = change_height_handler(global_config.leg_lifting_height - pos_mgr_get_global_h(), CMD_PARAM_OMITTED);
 					bool done = task_ctx->task_stage == TASK_STAGE_IDLE;
 					--task_ctx;
 							
@@ -939,6 +958,7 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 				{
 					task_ctx->walk.legs_group = 1 - task_ctx->walk.legs_group;
 					task_ctx->task_stage = TASK_STAGE_6;
+					allow_position_control(true);
 				}
 			}
 			else
@@ -947,13 +967,24 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 			}
 		}
 		break;
-		case TASK_STAGE_6: // Lift 3 legs
+		case TASK_STAGE_6: // start resting to stabileze
+			task_ctx->walk.rest_end = HAL_GetTick() + REST_BETWEEN_STEPS;
+			task_ctx->task_stage = TASK_STAGE_7;
+		break;
+		case TASK_STAGE_7: // wait rest end
+			if (task_ctx->walk.rest_end < HAL_GetTick())
+			{
+				task_ctx->task_stage = TASK_STAGE_8;
+			}			
+		break;
+		case TASK_STAGE_8: // Lift 3 legs
 		{
+			allow_position_control(false);
 			if (pos_mgr_lift_three_legs(task_ctx->walk.legs_group) == POS_MGR_SUCCESS)
 			{
 				if (abort_active_command)
 				{
-					task_ctx->task_stage = TASK_STAGE_7;
+					task_ctx->task_stage = TASK_STAGE_9;
 				}
 				else
 				{
@@ -966,14 +997,14 @@ static cmd_mgr_status_t walk_handler(int direction, int arg_2)
 			}
 		}
 		break;
-		case TASK_STAGE_7: // get default position (3 legs are on surface)
+		case TASK_STAGE_9: // get default position (3 legs are on surface)
 			for (uint8_t leg_id = 0; leg_id < LEGS_COUNT; ++leg_id)
 			{
 				pos_mgr_set_leg_position(leg_id, CMD_PARAM_OMITTED, pos_mgr_get_global_r(), 90);
 			}
-			task_ctx->task_stage = TASK_STAGE_8;
+			task_ctx->task_stage = TASK_STAGE_10;
 		break;
-		case TASK_STAGE_8: // Fall 3 legs
+		case TASK_STAGE_10: // Fall 3 legs
 		{
 			bool done;
 			if (pos_mgr_fall_three_legs(task_ctx->walk.legs_group, &done) == POS_MGR_SUCCESS)

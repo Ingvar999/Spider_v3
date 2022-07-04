@@ -28,6 +28,7 @@ typedef struct {
 	int speed;
 	int position_v;
 	int position_h;
+	int leg_lifting_height;
 	bool workload_alignment_enable;
 	bool gyro_control_enable;
 	bool use_home_ap;
