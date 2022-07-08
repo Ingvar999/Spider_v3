@@ -17,9 +17,10 @@
 #define WORKLOAD_TO_VCC_ADC				(0.06)
 #define LOW_VCC										(1659)			// 7000 mV
 #define CRITICAL_VCC							(1564)			// 6600 mV
-#define CRITICAL_WORKLOAD					(6000)
-#define CRITICAL_LEG_WORKLOAD			(1500)
+#define CRITICAL_WORKLOAD					(5800)
+#define CRITICAL_LEG_WORKLOAD			(1400)
 
+#define SURFACE_LEG_WORKLOAD			(100)		
 #define MIN_LEG_WORKLOAD					(18)
 #define MIN_LEGS_ON_SURFACE				(2)
 

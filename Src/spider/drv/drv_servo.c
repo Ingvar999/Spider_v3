@@ -87,7 +87,7 @@ static const uint16_t base_pulse[SERVO_ID_MAX] = {
 };
 
 static bool is_initialized = false;
-static acceleration_mode_t accel_mode = FADING_SPEED;
+static acceleration_mode_t accel_mode = ACCELERATION_DEFAULT;
 static uint16_t current_pwm[SERVO_ID_MAX];
 static uint16_t target_pwm[SERVO_ID_MAX];
 
@@ -290,6 +290,11 @@ drv_servo_status_t drv_servo_update_servos_position(uint32_t time_passed, bool *
 			else
 			{
 				de = delta;
+			}
+			
+			if ((port >= SERVO_ID_ROTATION_0) && (port <= SERVO_ID_ROTATION_5)) // adjust leg rotation speed
+			{
+				de *= 2.2;
 			}
 			
 			d = (de < 2) ? 1 : (int)de;

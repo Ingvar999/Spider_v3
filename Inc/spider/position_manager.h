@@ -18,7 +18,7 @@
 #define MAX_TEMP_TURN_ANGLE			(22)
 #define MAX_TURN_ANGLE					(10)
 #define STEP_LENGTH							(25)
-#define REST_BETWEEN_STEPS			(300)
+#define REST_BETWEEN_STEPS			(50)
 
 typedef enum {
 	POS_MGR_SUCCESS,
@@ -31,6 +31,7 @@ int pos_mgr_get_global_r(void);
 int pos_mgr_get_leg_h(uint8_t leg_id);
 int pos_mgr_get_leg_r(uint8_t leg_id);
 int pos_mgr_get_max_legs_height(void);
+int pos_mgr_get_min_height(int r);
 
 void pos_mgr_set_fixed_leg(uint8_t leg_id);
 void pos_mgr_reset_fixed_leg(void);

@@ -18,7 +18,7 @@ typedef struct {
 
 config_t global_config;
 static const config_t default_config = {
-	3, // speed
+	4, // speed
 	0, // position vertical
 	0, // position horizontal
 	20, // leg lifting height
@@ -134,7 +134,12 @@ config_status_t persist_config(void)
 		
 		HAL_FLASH_Lock();
 	}
-		
+	
+	if (status != CFG_SUCCESS)
+	{
+		LOG_ERR("Persist config failed: %d", status);
+	}
+	
 	return status;
 }
 

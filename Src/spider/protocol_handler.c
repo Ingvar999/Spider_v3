@@ -228,6 +228,16 @@ static external_status_t process_set_request(char property, int arg1, int arg2)
 				status = EXT_INVALID_PARAMETERS;
 			}
 		break;
+		case 'f':
+			if ((arg1 != CMD_PARAM_OMITTED) && (arg1 > 0) && (arg1 <= L1 + L2))
+			{
+				global_config.leg_lifting_height = arg1;
+			}
+			else
+			{
+				status = EXT_INVALID_PARAMETERS;
+			}
+		break;
 		default:
 			status = EXT_UNSUPPORTED_PROPERTY;
 	}
@@ -283,6 +293,9 @@ static external_status_t process_info_request(const char *property_list, int pro
 			break;
 			case 'q':
 				PUSH_INFO("%d %d", global_config.position_v, global_config.position_h);
+			break;
+			case 'f':
+				PUSH_INFO("%d", global_config.leg_lifting_height);
 			break;
 			default:
 				PUSH_INFO("None");

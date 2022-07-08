@@ -96,7 +96,7 @@ pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius)
 	{
     if (height < 0)
 		{
-			height += L2;
+			height += L1;
 			double r = sqrt(SQR(radius) + SQR(height));
 			if (r < L2)
 			{
@@ -110,6 +110,18 @@ pos_mgr_status_t pos_mgr_check_leg_position(int height, int radius)
   }
 
   return status;
+}
+
+int pos_mgr_get_min_height(int r)
+{
+	if (r < L2)
+	{
+		return sqrt(SQR(L2) - SQR(r)) - L1;
+	}
+	else
+	{
+		return -sqrt(SQR(L2 + L1) - SQR(r));
+	}
 }
 
 void pos_mgr_set_leg_position(uint8_t leg_id, int height, int radius, int rotation)
@@ -219,6 +231,7 @@ static pos_mgr_status_t reach_surface(bool *reached, uint8_t start_leg, uint8_t 
 	*reached = true;
 	pos_mgr_status_t status = POS_MGR_SUCCESS;
 	
+	drv_servo_set_accel_mode(NO_ACCELERATION);
 	for (uint8_t leg_id = start_leg; leg_id < LEGS_COUNT && status == POS_MGR_SUCCESS; leg_id += inc)
 	{
 		if ((leg_id != fixed_leg_id) && !drv_sensors_is_leg_on_surface(leg_id))
@@ -230,6 +243,10 @@ static pos_mgr_status_t reach_surface(bool *reached, uint8_t start_leg, uint8_t 
 				*reached = false;
 			}
 		}
+	}
+	if (reached)
+	{
+		drv_servo_set_accel_mode(ACCELERATION_DEFAULT);
 	}
 	return status;
 }

@@ -49,6 +49,8 @@ typedef enum {
 	FADING_SPEED,
 } acceleration_mode_t;
 
+#define ACCELERATION_DEFAULT			FADING_SPEED
+
 drv_servo_status_t drv_servo_init(void);
 drv_servo_status_t drv_servo_set(servo_id_t port, uint16_t value, bool force);
 

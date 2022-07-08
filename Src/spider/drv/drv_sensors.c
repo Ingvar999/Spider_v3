@@ -91,7 +91,7 @@ static uint16_t get_vcc_adc()
 
 static uint16_t get_adjusted_vcc_adc()
 {
-	return get_vcc_adc() + (drv_sensors_get_whole_workload() * WORKLOAD_TO_VCC_ADC); // Compensate VCC levele fall due to workload current
+	return get_vcc_adc() + (drv_sensors_get_whole_workload() * WORKLOAD_TO_VCC_ADC); // Compensate VCC level fall due to workload current
 }
 
 int drv_sensors_get_vcc(void)
@@ -111,7 +111,8 @@ bool drv_sensors_is_critical_vcc(void)
 
 bool drv_sensors_is_leg_on_surface(uint8_t leg_id)
 {
-	return HAL_GPIO_ReadPin(leg_surface_detection_pins[leg_id].port, leg_surface_detection_pins[leg_id].pin) == GPIO_PIN_RESET;
+	return (HAL_GPIO_ReadPin(leg_surface_detection_pins[leg_id].port, leg_surface_detection_pins[leg_id].pin) == GPIO_PIN_RESET) 
+					|| (processed_adc[leg_id] > SURFACE_LEG_WORKLOAD);
 }
 
 bool drv_sensors_is_spider_on_surface(void)
