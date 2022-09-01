@@ -30,8 +30,8 @@ static void vcc_control(uint32_t tick)
 	if (drv_sensors_is_critical_vcc() && !is_spider_in_psm())
 	{
 		LOG_ERR("Critical Vcc");
-		handle_enter_psm(true);
 		protocol_send_response(REQUEST_ID_ASYNC_EVENT, EXT_CRITICAL_VCC, 0);
+		handle_enter_psm(true);  // will postpone heartbeat thread, no return
 	}
 	else if ((tick >= next_notification) && drv_sensors_is_low_vcc())
 	{
@@ -68,8 +68,8 @@ static void workload_control(void)
 	
 	if (critical_workload)
 	{
-		handle_enter_psm(true);
 		protocol_send_response(REQUEST_ID_ASYNC_EVENT, EXT_CRITICAL_WORKLOAD, 0);
+		handle_enter_psm(true); // will postpone heartbeat thread, no return
 	}
 }
 

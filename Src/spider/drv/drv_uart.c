@@ -48,9 +48,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	
 	if (uart_port < UART_ID_LAST)
 	{
-		if (ch == uart_config[uart_port].terminator){
+		// Special case esp send ptomt
+		if ((uart_port == UART_ID_ESP) && (ch == '>') && (uart_config[uart_port].rx_pos == 0))
+		{
+			rx_buf[uart_port][uart_config[uart_port].rx_pos++] = ch;
 			rx_buf[uart_port][uart_config[uart_port].rx_pos] = 0;
 			uart_config[uart_port].input_handler((char *)rx_buf[uart_port], uart_config[uart_port].rx_pos + 1);
+			uart_config[uart_port].rx_pos = 0;
+		}
+		else if (ch == uart_config[uart_port].terminator)
+		{
+			rx_buf[uart_port][uart_config[uart_port].rx_pos] = 0;
+			if (uart_config[uart_port].rx_pos > 0)
+			{
+				uart_config[uart_port].input_handler((char *)rx_buf[uart_port], uart_config[uart_port].rx_pos + 1);
+			}
 			uart_config[uart_port].rx_pos = 0;
 		}	
 		else if (ch == BACKSPACE)

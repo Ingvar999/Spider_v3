@@ -17,6 +17,7 @@
 #include "drv_servo.h"
 #include "services.h"
 #include "config.h"
+#include "event_handler.h"
 
 #pragma anon_unions
 
@@ -115,9 +116,10 @@ void cmd_mgr_abort_command(bool all, bool force)
 	{
 		if (force)
 		{
-			LOG_WARN("Task aborted: type - %d, id - %d", task_ctx->task_type, active_task_id);
+			LOG_WARN("Task aborted: type - %d, id - '%c'", task_ctx->task_type, active_task_id);
 			protocol_send_response(active_task_id, EXT_COMMAND_ABORTED, 0);
 			task_ctx->task_stage = TASK_STAGE_IDLE;
+			pos_mgr_reset_fixed_leg();
 			allow_position_control(true);
 		}
 		else
@@ -127,9 +129,13 @@ void cmd_mgr_abort_command(bool all, bool force)
 	}
 	
 	if (all)
-	{
+	{		
 		pending_task_ctx_t task;
-		while (xQueueReceive(task_queue, (void *)&task, (TickType_t)0) == pdTRUE){}
+		while (xQueueReceive(task_queue, (void *)&task, (TickType_t)0) == pdTRUE)
+		{
+			LOG_WARN("Task aborted: type - %d, id - '%c'", task.task_type, task.task_id);
+			protocol_send_response(task.task_id, EXT_COMMAND_ABORTED, 0);
+		}
 	}
 }
 
@@ -193,13 +199,20 @@ cmd_mgr_status_t cmd_mgr_process(void)
 		pending_task_ctx_t task;
 		if (xQueueReceive(task_queue, (void *)&task, (TickType_t)0) == pdTRUE)
 		{
-			task_ctx->task_stage = TASK_STAGE_1;
-			task_ctx->task_type = task.task_type;
-			active_task_id = task.task_id;
-			allow_position_control(false);
-			abort_active_command = false;
-			status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
-			task_executed = true;
+			if (is_spider_in_psm())
+			{
+				protocol_send_response(task.task_id, EXT_SPIDER_IN_PSM, 0);
+			}
+			else
+			{
+				task_ctx->task_stage = TASK_STAGE_1;
+				task_ctx->task_type = task.task_type;
+				active_task_id = task.task_id;
+				allow_position_control(false);
+				abort_active_command = false;
+				status = task_handlers[task_ctx->task_type](task.arg_1, task.arg_2);
+				task_executed = true;
+			}
 		}
 	}
 	else

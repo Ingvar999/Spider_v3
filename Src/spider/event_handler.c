@@ -42,7 +42,7 @@ void handle_enter_psm(bool force)
 	{
 		if (force)
 		{
-			handle_post_enter_psm();
+			LOG_WARN("Force enter psm");
 			cmd_mgr_abort_command(true, true);
 		}
 		else
@@ -57,18 +57,22 @@ void handle_enter_psm(bool force)
 			ASSERT_IF(ASSERT_CODE_1B, cmd_mgr_add_task(&task) != CMD_MGR_SUCCESS);
 		}	
 		
-		drv_sensors_deinit();
-		
 		is_in_psm = true;
 		LOG_INFO("Enter PSM Done!");
+		
+		if (force)
+		{
+			handle_post_enter_psm();
+		}
 	}
 }
 
 void handle_post_enter_psm(void)
 {
 	drv_servo_disable();
-	osThreadSuspend(HeartBeatTaskHandle);
+	drv_sensors_deinit();
 	LED_OFF(GREEN);
+	osThreadSuspend(HeartBeatTaskHandle);
 }
 
 void handle_exit_psm(void)

@@ -24,7 +24,7 @@ extern I2C_HandleTypeDef hi2c1;
 #define BASE_PULSE_MAX				(460)
 #define PULSE_RANGE						(1620)
 #define PULSE_PER_DEGREE			(9)
-#define PCA_I2C_TIMEOT				(5)
+#define PCA_I2C_TIMEOT				(20)
 
 #define PCA9685_SET_BIT_MASK(BYTE, MASK)      ((BYTE) |= (uint8_t)(MASK))
 #define PCA9685_CLEAR_BIT_MASK(BYTE, MASK)    ((BYTE) &= (uint8_t)(~(uint8_t)(MASK)))
@@ -173,6 +173,8 @@ static drv_servo_status_t pca9685_pwm(uint8_t address, uint8_t num, uint16_t on,
 	if (res != HAL_OK)
 	{
 		LOG_ERR("Write Servo failed: addr - %X, status - %d", address, res);
+		HAL_Delay(PCA_I2C_TIMEOT);
+		HAL_I2C_Reinit();
 	}
 	return res == HAL_OK ? DRV_SERVO_SUCCESS : DRV_SERVO_HW_ACCESS_ERROR;
 }

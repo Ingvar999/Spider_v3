@@ -27,7 +27,7 @@
 
 #define HOST_RX_BUF_SIZE					(28)
 #define ESP_RX_BUF_SIZE						RX_BUF_SIZE
-#define ESP_INPUT_QUEUE_SIZE			(3)
+#define ESP_INPUT_QUEUE_SIZE			(5)
 
 osThreadId HeartBeatTaskHandle;
 /* Private variables ---------------------------------------------------------*/
@@ -45,14 +45,16 @@ static void StartCommandManagerTask(void const * argument);
 
 void cli_event_handler(const char *data, uint32_t len)
 {
-	if (!cli_in_process && HOST_RX_BUF_SIZE >= len){
+	if (!cli_in_process && HOST_RX_BUF_SIZE >= len)
+	{
 		memcpy(cli_string, data, len);
 		cli_in_process = true;
 		if (osThreadResume(InputHandlerTaskHandle) != osOK){
 			LED_ON(RED);
 		}
 	}
-	else {
+	else 
+	{
 		if (cli_in_process)
 		{
 			osThreadResume(InputHandlerTaskHandle);
@@ -66,13 +68,16 @@ void esp_event_handler(const char *data, uint32_t len)
 {
 	void *buffer;
 	
-	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, true)) != NULL)){
+	if ((ESP_RX_BUF_SIZE >= len) && ((buffer = bufq_get_write_buffer(&esp_input_queue, true)) != NULL))
+	{
 		memcpy(buffer, data, len);
-		if (osThreadResume(InputHandlerTaskHandle) != osOK){
+		if (osThreadResume(InputHandlerTaskHandle) != osOK)
+		{
 			LED_ON(RED);
 		}
 	}
-	else {
+	else 
+	{
 		// ESP packet lost
 		LED_ON(RED);
 	}
@@ -197,8 +202,8 @@ static void StartHeartBeatTask(void const * argument)
 		bool is_idle;
 		if (drv_servo_update_servos_position(HEART_BEAT_DELAY, &is_idle) != DRV_SERVO_SUCCESS)
 		{
-			is_idle = false;
-			TODO("Send Servo error");
+			is_idle = true;
+			TODO("Handle Servo error");
 		}
 		
 		process_services(&is_idle);
