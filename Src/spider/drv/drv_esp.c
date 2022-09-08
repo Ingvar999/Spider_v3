@@ -310,9 +310,13 @@ void drv_esp_handle_input(const char *input)
 							handled = true;
 						}
 					case ESP_SEND_2:
-						if (str_starts_with(input, "Recv"))
+						if (str_starts_with(input, " \r"))
 						{
 							bufq_free_buffer(&esp_tx_queue, false);
+							handled = true;
+						}
+						else if (str_starts_with(input, "Recv"))
+						{
 							handled = true;
 						}
 						else if (str_starts_with(input, "SEND OK"))

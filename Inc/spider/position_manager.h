@@ -17,7 +17,7 @@
 #define LEG_FALLING_STEP				(4)
 #define MAX_TEMP_TURN_ANGLE			(22)
 #define MAX_TURN_ANGLE					(10)
-#define STEP_LENGTH							(25)
+#define STEP_LENGTH							(30)
 #define REST_BETWEEN_STEPS			(50)
 
 typedef enum {

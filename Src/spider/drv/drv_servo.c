@@ -13,11 +13,13 @@
 #include "main.h"
 #include "log.h"
 #include "config.h"
+#include "drv_i2c.h"
 
 extern I2C_HandleTypeDef hi2c1;
 
 #define I2C_HANDLER						(&hi2c1)
-#define PCA_BOARD_BASE_ADDR		(0x81)
+#define PCA_BOARD_BASE_ADDR_8	(0x80)
+#define PCA_BOARD_BASE_ADDR_7	(PCA_BOARD_BASE_ADDR_8 >> 1)
 #define PORTS_PER_BOARD				(16)
 #define BASE_PULSE_MIN				(380)
 #define BASE_PULSE_MID				(420)
@@ -131,8 +133,8 @@ static drv_servo_status_t pca9685_write_u8(uint8_t dev_addr, uint8_t address, ui
 static drv_servo_status_t pca9685_init(uint8_t address)
 {
 	drv_servo_status_t status;
-
 	uint8_t mode = PCA9685_REGISTER_MODE1_AI | PCA9685_REGISTER_MODE1_RESTART;
+	address = address << 1;
 
 	status = pca9685_write_u8(address, PCA9685_REGISTER_MODE1, mode);
 	
@@ -148,6 +150,7 @@ static drv_servo_status_t pca9685_deinit(uint8_t address)
 	drv_servo_status_t status;
 	uint8_t mode = PCA9685_REGISTER_MODE1_SLEEP;
 	uint8_t outputBuffer[5] = {PCA9685_REGISTER_ALL_LED_ON_L, 0, 0, 0xFF, 0xFF};
+	address = address << 1;
 	
 	if (HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, PCA_I2C_TIMEOT) == HAL_OK)
 	{
@@ -170,12 +173,17 @@ static drv_servo_status_t pca9685_pwm(uint8_t address, uint8_t num, uint16_t on,
 {
   uint8_t outputBuffer[5] = {0x06 + 4*num, on, (on >> 8), off, (off >> 8)};
 	HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(I2C_HANDLER, address, outputBuffer, 5, PCA_I2C_TIMEOT);
-	if (res != HAL_OK)
+	
+	if (res == HAL_BUSY)
+	{
+		LOG_ERR("I2C servo busy, try to recover");
+		I2C_ClearBusyFlagErratum(I2C_HANDLER, PCA_I2C_TIMEOT);
+	}
+	else if (res != HAL_OK)
 	{
 		LOG_ERR("Write Servo failed: addr - %X, status - %d", address, res);
-		HAL_Delay(PCA_I2C_TIMEOT);
-		HAL_I2C_Reinit();
 	}
+	
 	return res == HAL_OK ? DRV_SERVO_SUCCESS : DRV_SERVO_HW_ACCESS_ERROR;
 }
 
@@ -183,7 +191,7 @@ static drv_servo_status_t update_servo_pwm(servo_id_t port)
 {
 	if (is_initialized)
 	{
-		uint8_t pca_addr = PCA_BOARD_BASE_ADDR + (port / PORTS_PER_BOARD);
+		uint8_t pca_addr = (PCA_BOARD_BASE_ADDR_7 + (port / PORTS_PER_BOARD)) << 1;
 		uint8_t pca_port = port % PORTS_PER_BOARD;
 
 		return pca9685_pwm(pca_addr, pca_port, 0, current_pwm[port]);
@@ -205,10 +213,10 @@ drv_servo_status_t drv_servo_init(void)
 	
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);
 	
-	status = pca9685_init(PCA_BOARD_BASE_ADDR);
+	status = pca9685_init(PCA_BOARD_BASE_ADDR_7);
 	if (status == DRV_SERVO_SUCCESS)
 	{
-		status = pca9685_init(PCA_BOARD_BASE_ADDR + 1);
+		status = pca9685_init(PCA_BOARD_BASE_ADDR_7 + 1);
 		if (status == DRV_SERVO_SUCCESS)
 		{
 			is_initialized = true;
@@ -236,8 +244,8 @@ drv_servo_status_t drv_servo_enable(void)
 
 void drv_servo_disable(void)
 {	
-	pca9685_deinit(PCA_BOARD_BASE_ADDR);
-	pca9685_deinit(PCA_BOARD_BASE_ADDR + 1);
+	pca9685_deinit(PCA_BOARD_BASE_ADDR_7);
+	pca9685_deinit(PCA_BOARD_BASE_ADDR_7 + 1);
 	is_initialized = false;
 	
 	HAL_GPIO_WritePin(SERVO_DISABLE_GPIO_Port, SERVO_DISABLE_Pin, GPIO_PIN_SET);

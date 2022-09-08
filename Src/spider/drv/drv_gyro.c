@@ -11,11 +11,11 @@
 #include "defines.h"
 #include "debug_utils.h"
 #include "stm32f4xx_hal.h"
-#include "main.h"
+#include "drv_i2c.h"
 
-extern I2C_HandleTypeDef hi2c1;
+extern I2C_HandleTypeDef hi2c3;
 
-#define I2C_HANDLER								(&hi2c1)
+#define I2C_HANDLER								(&hi2c3)
 #define I2C_TIMEOUT								(25)
 #define INIT_SAMPLE_DELAY					(50)
 #define MPU6050_SMPLRT_DIV				(0x19)
@@ -251,11 +251,15 @@ static drv_gyro_status_t MPU6050_read(int addr, uint8_t *buffer, int size)
 	
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read(I2C_HANDLER, MPU6050_I2C_ADDRESS, addr, 1, buffer, size, I2C_TIMEOUT);
 	
-	if (hal_status != HAL_OK)
+	if (hal_status == HAL_BUSY)
+	{
+		LOG_ERR("I2C gyro busy, try to recover");
+		//I2C_ClearBusyFlagErratum(I2C_HANDLER, I2C_TIMEOUT);
+		status = GYRO_GENERIC_ERROR;
+	}
+	else if (hal_status != HAL_OK)
 	{
 		LOG_ERR("Read Gyro values failed: status - %d", hal_status);
-		HAL_Delay(I2C_TIMEOUT);
-		HAL_I2C_Reinit();
 		status = (hal_status == HAL_TIMEOUT) ? GYRO_TIMEOUT : GYRO_GENERIC_ERROR;
 	}
 	

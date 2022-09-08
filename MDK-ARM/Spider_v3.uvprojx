@@ -141,7 +141,7 @@
           <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
-          <pFcarmGrp></pFcarmGrp>
+          <pFcarmGrp>Drivers/CMSIS</pFcarmGrp>
           <pFcArmRoot></pFcArmRoot>
           <FcArmLst>0</FcArmLst>
         </Utilities>
@@ -336,7 +336,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;                             ../Drivers/STM32F4xx_HAL_Driver/Inc;                             ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;                             ../Drivers/CMSIS/Device/ST/STM32F4xx/Include;                             ../Drivers/CMSIS/Include;                             ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;                             ../Middlewares/Third_Party/FreeRTOS/Source/include;                             ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                             ../Inc/spider;                             ../Inc/spider/drv</IncludePath>
+              <IncludePath>../Inc;                                    ../Drivers/STM32F4xx_HAL_Driver/Inc;                                    ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;                                    ../Drivers/CMSIS/Device/ST/STM32F4xx/Include;                                    ../Drivers/CMSIS/Include;                                    ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;                                    ../Middlewares/Third_Party/FreeRTOS/Source/include;                                    ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                                    ../Inc/spider;                                    ../Inc/spider/drv</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -749,6 +749,16 @@
               <FileName>drv_sensors.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\spider\drv\drv_sensors.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_i2c.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Inc\spider\drv\drv_i2c.h</FilePath>
+            </File>
+            <File>
+              <FileName>drv_i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\spider\drv\drv_i2c.c</FilePath>
             </File>
           </Files>
         </Group>
