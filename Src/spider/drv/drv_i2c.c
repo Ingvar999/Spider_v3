@@ -7,6 +7,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "drv_i2c.h"
+#include "debug_utils.h"
 
 static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint32_t timeout)
 {
@@ -25,11 +26,29 @@ static uint8_t wait_for_gpio_state_timeout(GPIO_TypeDef *port, uint16_t pin, GPI
     return ret;
 }
 
-
-#define SCL_PIN			GPIO_PIN_6
-#define SDA_PIN			GPIO_PIN_7
 void I2C_ClearBusyFlagErratum(I2C_HandleTypeDef *hi2c, uint32_t timeout)
 {
+		uint16_t SCL_PIN, SDA_PIN;
+		GPIO_TypeDef *SCL_PORT, *SDA_PORT;
+		
+		if (hi2c->Instance == I2C1)
+		{
+			SCL_PIN	= GPIO_PIN_6;
+			SDA_PIN	= GPIO_PIN_7;
+			SCL_PORT = GPIOB;
+			SDA_PORT = GPIOB;
+		}
+		else if (hi2c->Instance == I2C3)
+		{
+			SCL_PIN	= GPIO_PIN_8;
+			SDA_PIN	= GPIO_PIN_9;
+			SCL_PORT = GPIOA;
+			SDA_PORT = GPIOC;
+		}
+		else
+		{
+			ASSERT(ASSERT_CODE_1C);
+		}
      // 2.13.7 I2C analog filter may provide wrong value, locking BUSY. STM32F10xx8 STM32F10xxB Errata sheet
 
     GPIO_InitTypeDef GPIO_InitStructure = {0};
@@ -44,51 +63,51 @@ void I2C_ClearBusyFlagErratum(I2C_HandleTypeDef *hi2c, uint32_t timeout)
     GPIO_InitStructure.Pull = GPIO_NOPULL;
 
     GPIO_InitStructure.Pin = SCL_PIN; // SCL
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStructure); 
+    HAL_GPIO_Init(SCL_PORT, &GPIO_InitStructure); 
 
     GPIO_InitStructure.Pin = SDA_PIN; // SDA
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
+    HAL_GPIO_Init(SDA_PORT, &GPIO_InitStructure);
 
     // 3. Check SCL and SDA High level in GPIOx_IDR.
-    HAL_GPIO_WritePin(GPIOB, SDA_PIN, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(GPIOB, SCL_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(SDA_PORT, SDA_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(SCL_PORT, SCL_PIN, GPIO_PIN_SET);
 
-    wait_for_gpio_state_timeout(GPIOB, SCL_PIN, GPIO_PIN_SET, timeout);
-    wait_for_gpio_state_timeout(GPIOB, SDA_PIN, GPIO_PIN_SET, timeout);
+    wait_for_gpio_state_timeout(SCL_PORT, SCL_PIN, GPIO_PIN_SET, timeout);
+    wait_for_gpio_state_timeout(SDA_PORT, SDA_PIN, GPIO_PIN_SET, timeout);
 
     // 4. Configure the SDA I/O as General Purpose Output Open-Drain, Low level (Write 0 to GPIOx_ODR).
-    HAL_GPIO_WritePin(GPIOB, SDA_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(SDA_PORT, SDA_PIN, GPIO_PIN_RESET);
 
     // 5. Check SDA Low level in GPIOx_IDR.
-    wait_for_gpio_state_timeout(GPIOB, SDA_PIN, GPIO_PIN_RESET, timeout);
+    wait_for_gpio_state_timeout(SDA_PORT, SDA_PIN, GPIO_PIN_RESET, timeout);
 
     // 6. Configure the SCL I/O as General Purpose Output Open-Drain, Low level (Write 0 to GPIOx_ODR).
-    HAL_GPIO_WritePin(GPIOB, SCL_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(SCL_PORT, SCL_PIN, GPIO_PIN_RESET);
 
     // 7. Check SCL Low level in GPIOx_IDR.
-    wait_for_gpio_state_timeout(GPIOB, SCL_PIN, GPIO_PIN_RESET, timeout);
+    wait_for_gpio_state_timeout(SCL_PORT, SCL_PIN, GPIO_PIN_RESET, timeout);
 
     // 8. Configure the SCL I/O as General Purpose Output Open-Drain, High level (Write 1 to GPIOx_ODR).
-    HAL_GPIO_WritePin(GPIOB, SCL_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(SCL_PORT, SCL_PIN, GPIO_PIN_SET);
 
     // 9. Check SCL High level in GPIOx_IDR.
-    wait_for_gpio_state_timeout(GPIOB, SCL_PIN, GPIO_PIN_SET, timeout);
+    wait_for_gpio_state_timeout(SCL_PORT, SCL_PIN, GPIO_PIN_SET, timeout);
 
     // 10. Configure the SDA I/O as General Purpose Output Open-Drain , High level (Write 1 to GPIOx_ODR).
-    HAL_GPIO_WritePin(GPIOB, SDA_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(SDA_PORT, SDA_PIN, GPIO_PIN_SET);
 
     // 11. Check SDA High level in GPIOx_IDR.
-    wait_for_gpio_state_timeout(GPIOB, SDA_PIN, GPIO_PIN_SET, timeout);
+    wait_for_gpio_state_timeout(SDA_PORT, SDA_PIN, GPIO_PIN_SET, timeout);
 
     // 12. Configure the SCL and SDA I/Os as Alternate function Open-Drain.
     GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
     //GPIO_InitStructure.Alternate = GPIO_AF4_I2C2; // F4
 
     GPIO_InitStructure.Pin = SCL_PIN;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
+    HAL_GPIO_Init(SCL_PORT, &GPIO_InitStructure);
 
     GPIO_InitStructure.Pin = SDA_PIN;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStructure);
+    HAL_GPIO_Init(SDA_PORT, &GPIO_InitStructure);
 
     // 13. Set SWRST bit in I2Cx_CR1 register.
     SET_BIT(hi2c->Instance->CR1, I2C_CR1_SWRST);

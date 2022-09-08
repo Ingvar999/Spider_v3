@@ -12,6 +12,8 @@
 #include "cmsis_os.h"
 #include "main.h"
 #include "log.h"
+#include "event_handler.h"
+#include "config.h"
 
 #define CHECK_ADC_DURATION				(0)
 
@@ -32,10 +34,23 @@ static const struct {
 	{GPIOB, GPIO_PIN_10},
 	{GPIOB, GPIO_PIN_12}
 };
+static uint16_t vcc_adc_cache;
 
 #if (CHECK_ADC_DURATION)
 static volatile uint32_t adc_last, adc_duration;
 #endif
+
+static uint16_t get_vcc_adc()
+{
+	uint16_t vcc_adc;
+	
+	HAL_ADC_Start(&hadc2);
+  HAL_ADC_PollForConversion(&hadc2, 2); 
+  vcc_adc = HAL_ADC_GetValue(&hadc2); 
+  HAL_ADC_Stop(&hadc2);
+	
+	return vcc_adc;
+}
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -46,6 +61,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		adc_duration =  time - adc_last;
 		adc_last = time;
 #endif
+		vcc_adc_cache = get_vcc_adc();
 		
 		uint32_t accum;
 		for (int i = 0; i < CHANNELS_NUMBER; ++i)
@@ -63,6 +79,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void drv_sensors_init(void)
 {
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&raw_adc, CHANNELS_NUMBER * SAMPLES_NUMBER);
+	vcc_adc_cache = get_vcc_adc();
 }
 
 void drv_sensors_deinit(void)
@@ -72,31 +89,27 @@ void drv_sensors_deinit(void)
 	memset((void *)processed_adc, 0, sizeof(processed_adc));
 }
 
-static uint16_t get_vcc_adc()
+static uint16_t get_vcc_adc_cache()
 {
 	static uint32_t next_conversion = 0;
-	static uint16_t vcc_adc;
 	
-	if (HAL_GetTick() >= next_conversion)
+	if (is_spider_in_psm() && (HAL_GetTick() >= next_conversion))
 	{
-		HAL_ADC_Start(&hadc2);
-    HAL_ADC_PollForConversion(&hadc2, 2); 
-    vcc_adc = HAL_ADC_GetValue(&hadc2); 
-    HAL_ADC_Stop(&hadc2);
+		vcc_adc_cache = get_vcc_adc();
 		
 		next_conversion = HAL_GetTick() + VCC_CACHE_VALIDITY;
 	}
-	return vcc_adc;
+	return vcc_adc_cache;
 }
 
 static uint16_t get_adjusted_vcc_adc()
 {
-	return get_vcc_adc() + (drv_sensors_get_whole_workload() * WORKLOAD_TO_VCC_ADC); // Compensate VCC level fall due to workload current
+	return get_vcc_adc_cache() + (drv_sensors_get_whole_workload() * WORKLOAD_TO_VCC_ADC); // Compensate VCC level fall due to workload current
 }
 
 int drv_sensors_get_vcc(void)
 {
-	return get_vcc_adc() * ADC_TO_VCC;
+	return get_vcc_adc_cache() * ADC_TO_VCC;
 }
 
 bool drv_sensors_is_low_vcc(void)
@@ -112,7 +125,7 @@ bool drv_sensors_is_critical_vcc(void)
 bool drv_sensors_is_leg_on_surface(uint8_t leg_id)
 {
 	return (HAL_GPIO_ReadPin(leg_surface_detection_pins[leg_id].port, leg_surface_detection_pins[leg_id].pin) == GPIO_PIN_RESET) 
-					|| (processed_adc[leg_id] > SURFACE_LEG_WORKLOAD);
+					|| (processed_adc[leg_id] > (SPEED_SURFACE_LEG_WORKLOAD * global_config.speed));
 }
 
 bool drv_sensors_is_spider_on_surface(void)

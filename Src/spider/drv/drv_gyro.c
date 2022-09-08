@@ -254,7 +254,7 @@ static drv_gyro_status_t MPU6050_read(int addr, uint8_t *buffer, int size)
 	if (hal_status == HAL_BUSY)
 	{
 		LOG_ERR("I2C gyro busy, try to recover");
-		//I2C_ClearBusyFlagErratum(I2C_HANDLER, I2C_TIMEOUT);
+		I2C_ClearBusyFlagErratum(I2C_HANDLER, I2C_TIMEOUT);
 		status = GYRO_GENERIC_ERROR;
 	}
 	else if (hal_status != HAL_OK)

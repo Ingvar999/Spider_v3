@@ -9,20 +9,20 @@
 
 #include "defines.h"
 
-#define CHANNELS_NUMBER						(7)
-#define SAMPLES_NUMBER						(16)
+#define CHANNELS_NUMBER								(7)
+#define SAMPLES_NUMBER								(16)
 
-#define VCC_CACHE_VALIDITY				(100)
-#define ADC_TO_VCC								(4.22)
-#define WORKLOAD_TO_VCC_ADC				(0.06)
-#define LOW_VCC										(1659)			// 7000 mV
-#define CRITICAL_VCC							(1564)			// 6600 mV
-#define CRITICAL_WORKLOAD					(5800)
-#define CRITICAL_LEG_WORKLOAD			(1450)
+#define VCC_CACHE_VALIDITY						(100)
+#define ADC_TO_VCC										(4.22)
+#define WORKLOAD_TO_VCC_ADC						(0.06)
+#define LOW_VCC												(1659)			// 7000 mV
+#define CRITICAL_VCC									(1564)			// 6600 mV
+#define CRITICAL_WORKLOAD							(5800)
+#define CRITICAL_LEG_WORKLOAD					(1450)
 
-#define SURFACE_LEG_WORKLOAD			(100)		
-#define MIN_LEG_WORKLOAD					(18)
-#define MIN_LEGS_ON_SURFACE				(2)
+#define SPEED_SURFACE_LEG_WORKLOAD		(23)		
+#define MIN_LEG_WORKLOAD							(18)
+#define MIN_LEGS_ON_SURFACE						(2)
 
 void drv_sensors_init(void);
 void drv_sensors_deinit(void);
